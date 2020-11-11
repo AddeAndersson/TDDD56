@@ -30,7 +30,7 @@
 struct node
 {
   int task;
-  struct node* next;
+  //struct node* next;
   struct node* prev;
 };
 typedef struct node node_t;

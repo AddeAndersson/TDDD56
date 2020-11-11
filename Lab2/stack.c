@@ -52,7 +52,15 @@ stack_check(stack_t *stack)
 #if MEASURE == 0
 	// Use assert() to check if your stack is in a state that makes sens
 	// This test should always pass 
-	assert(1 == 1);
+
+  // Test TODO: We were here
+  node_t* prev_ptr = stack->current_node->prev;
+  node_t* next_ptr;
+  int counter = 1;
+  while(prev_ptr != NULL) {
+    prev_ptr = prev_ptr->prev;
+    counter++;
+  }
 
 	// This test fails if the task is not allocated or if the allocation failed
 	assert(stack != NULL);
@@ -65,12 +73,13 @@ int /* Return the type you prefer */
 stack_push(stack_t* stack, int* task)
 {
   struct node* new_node = (struct node*)malloc(sizeof(struct node));
-  new_node->next = NULL;
+  //new_node->next = NULL;
   
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   new_node->task = *task;
   new_node->prev = stack->current_node;
+  //stack->current_node->next = new_node;
   stack->current_node = new_node;
 
 
@@ -84,7 +93,7 @@ stack_push(stack_t* stack, int* task)
   // Debug practice: you can check if this operation results in a stack in a consistent check
   // It doesn't harm performance as sanity check are disabled at measurement time
   // This is to be updated as your implementation progresses
-  stack_check((stack_t*)1);
+  stack_check(stack);
 
   return 0;
 }
@@ -92,11 +101,14 @@ stack_push(stack_t* stack, int* task)
 int /* Return the type you prefer */
 stack_pop(stack_t* stack)
 {
+
+  if(stack->current_node == NULL) return 1;
+
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   node_t* old_node = stack->current_node;
   stack->current_node = old_node->prev;
-  stack->current_node->next = NULL;
+  //stack->current_node->next = NULL;
   free(old_node);
 
 #elif NON_BLOCKING == 1
