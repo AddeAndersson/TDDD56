@@ -165,13 +165,9 @@ parallel_mandelbrot(struct mandelbrot_thread *args, struct mandelbrot_param *par
 		// Entire width: from 0 to picture's width
 		parameters->begin_w = 0;
 		parameters->end_w = parameters->width / 2;
-
-		// Go
-		compute_chunk(parameters);
 	}
 	else if(args->id == 2 || args->id == 5)
 	{
-		printf("asdasd");
 		parameters->begin_h = (args->id - 2) * (parameters->height / 4);
 		parameters->end_h = (args->id - 1) * (parameters->height / 4);
 
@@ -194,6 +190,9 @@ parallel_mandelbrot(struct mandelbrot_thread *args, struct mandelbrot_param *par
 		parameters->begin_w = 3 * (parameters->width / 4);
 		parameters->end_w = parameters->width;
 	}
+	
+	// Go
+	compute_chunk(parameters);
 
 #endif
 // Compiled only if LOADBALANCE = 2
