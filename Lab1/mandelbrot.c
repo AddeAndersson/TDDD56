@@ -206,14 +206,18 @@ parallel_mandelbrot(struct mandelbrot_thread *args, struct mandelbrot_param *par
 
 	// Define the region compute_chunk() has to compute
 	// Entire height: from 0 to picture's height
-	while((current_height + rows) <= parameters->height)
+	int local_height;
+	while(1)
 	{
-		parameters->begin_h = current_height;
-		parameters->end_h = current_height + rows;
-
 		pthread_mutex_lock(&mutex);
-		current_height = current_height + rows;
+		local_height = current_height;
+		current_height = local_height + rows;
 		pthread_mutex_unlock(&mutex);
+
+		if((local_height + rows) > parameters->height) break;
+
+		parameters->begin_h = local_height;
+		parameters->end_h = local_height + rows;
 
 		parameters->begin_w = 0;
 		parameters->end_w = parameters->width;
@@ -221,18 +225,17 @@ parallel_mandelbrot(struct mandelbrot_thread *args, struct mandelbrot_param *par
 	}
 
 	// Special case
-	pthread_mutex_lock(&mutex);
-	rows = ((current_height + rows) - parameters->height);
-	pthread_mutex_unlock(&mutex);
-	if(rows) 
+	rows = ((local_height + rows) - parameters->height);
+	if(rows)
 	{
-		parameters->begin_h = current_height;
-		parameters->end_h = current_height + rows;
+		assert(local_height != parameters->height); // Test
+		parameters->begin_h = local_height;
+		parameters->end_h = parameters->height;
 		parameters->begin_w = 0;
 		parameters->end_w = parameters->width;
 		compute_chunk(parameters);
 	}
-	
+
 #endif
 }
 /***** end *****/
@@ -294,7 +297,7 @@ run_thread(void * buffer)
 
 		// Wait for the next work signal
 		pthread_barrier_wait(&thread_pool_barrier);
-	
+
 		// Fetch the latest parameters
 		param = mandelbrot_param;
 	}
