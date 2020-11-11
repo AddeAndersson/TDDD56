@@ -19,9 +19,12 @@
 
 #if NB_THREADS > 0
 #include <pthread.h>
+pthread_mutex_t mutex;
 #endif
 
 color_t *color = NULL;
+size_t current_height = 0;
+int rows = 4;
 
 #if NB_THREADS > 0
 // Compiled only when several threads are used
@@ -126,6 +129,7 @@ init_round(struct mandelbrot_thread *args)
 {
 	// Initialize or reinitialize here variables before any thread starts or restarts computation
 	// Every thread run this function; feel free to allow only one of them to do anything
+	pthread_mutex_init(&mutex, NULL);
 }
 
 /*
@@ -190,7 +194,7 @@ parallel_mandelbrot(struct mandelbrot_thread *args, struct mandelbrot_param *par
 		parameters->begin_w = 3 * (parameters->width / 4);
 		parameters->end_w = parameters->width;
 	}
-	
+
 	// Go
 	compute_chunk(parameters);
 
@@ -199,19 +203,36 @@ parallel_mandelbrot(struct mandelbrot_thread *args, struct mandelbrot_param *par
 #if LOADBALANCE == 2
 	// *optional* replace this code with another load-balancing solution.
 	// Only thread of ID 0 compute the whole picture
-	if(args->id == 0)
+
+	// Define the region compute_chunk() has to compute
+	// Entire height: from 0 to picture's height
+	while((current_height + rows) <= parameters->height)
 	{
-		// Define the region compute_chunk() has to compute
-		// Entire height: from 0 to picture's height
-		parameters->begin_h = 0;
-		parameters->end_h = parameters->height;
-		// Entire width: from 0 to picture's width
+		parameters->begin_h = current_height;
+		parameters->end_h = current_height + rows;
+
+		pthread_mutex_lock(&mutex);
+		current_height = current_height + rows;
+		pthread_mutex_unlock(&mutex);
+
 		parameters->begin_w = 0;
 		parameters->end_w = parameters->width;
-
-		// Go
 		compute_chunk(parameters);
 	}
+
+	// Special case
+	pthread_mutex_lock(&mutex);
+	rows = ((current_height + rows) - parameters->height);
+	pthread_mutex_unlock(&mutex);
+	if(rows) 
+	{
+		parameters->begin_h = current_height;
+		parameters->end_h = current_height + rows;
+		parameters->begin_w = 0;
+		parameters->end_w = parameters->width;
+		compute_chunk(parameters);
+	}
+	
 #endif
 }
 /***** end *****/
