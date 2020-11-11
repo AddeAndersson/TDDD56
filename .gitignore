@@ -1,6 +1,0 @@
-#Ignore every file
-Lab1/*.*
-Lab1/Makefile
-
-#Except these
-!Lab1/mandelbrot.c
