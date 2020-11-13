@@ -172,7 +172,6 @@ test_push_safe()
 {
   // Make sure your stack remains in a good state with expected content when
   // several threads push concurrently to it
-
   // TODO: We were here
   // Do some work
   stack = malloc(sizeof(stack_t));

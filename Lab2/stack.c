@@ -81,7 +81,6 @@ stack_push(int* task)
   stack->current_node = new_node;
   pthread_mutex_unlock(&mutex);
 
-
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
 #else
