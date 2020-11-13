@@ -143,10 +143,15 @@ test_setup()
 
   // Allocate a new stack and reset its values
   stack = malloc(sizeof(stack_t));
+  node_t* node = malloc(sizeof(node_t));
 
   // Reset explicitely all members to a well-known initial value
   // For instance (to be deleted as your stack design progresses):
-  stack->change_this_member = 0;
+  node->prev = NULL;
+  //node->next = NULL;
+  node->task = -1;
+  //stack->head = node;
+  stack->current_node = node;
 }
 
 void
@@ -168,9 +173,15 @@ test_push_safe()
 {
   // Make sure your stack remains in a good state with expected content when
   // several threads push concurrently to it
-
+  // TODO: We were here
   // Do some work
-  stack_push(/* add relevant arguments here */);
+  printf("asd");
+  stack = malloc(sizeof(stack_t));
+  int task = 0;
+  while(task < 10) {
+    stack_push(stack, &task);
+    task++;
+  }
 
   // check if the stack is in a consistent state
   int res = assert(stack_check(stack));
@@ -178,7 +189,7 @@ test_push_safe()
   // check other properties expected after a push operation
   // (this is to be updated as your stack design progresses)
   // Now, the test succeeds
-  return res && assert(stack->change_this_member == 0);
+  return res && assert(stack->current_node != NULL);
 }
 
 int
