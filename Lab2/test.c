@@ -65,6 +65,8 @@ typedef int data_t;
 #define DATA_SIZE sizeof(data_t)
 #define DATA_VALUE 5
 
+data_t data;
+
 #ifndef NDEBUG
 int
 assert_fun(int expr, const char *str, const char *file, const char* function, size_t line)
@@ -80,9 +82,6 @@ assert_fun(int expr, const char *str, const char *file, const char* function, si
 		return 1;
 }
 #endif
-
-stack_t *stack;
-data_t data;
 
 #if MEASURE != 0
 struct stack_measure_arg
@@ -133,6 +132,8 @@ void
 test_init()
 {
   // Initialize your test batch
+  pthread_mutex_init(&mutex, NULL);
+
 }
 
 void
@@ -148,9 +149,7 @@ test_setup()
   // Reset explicitely all members to a well-known initial value
   // For instance (to be deleted as your stack design progresses):
   node->prev = NULL;
-  //node->next = NULL;
   node->task = -1;
-  //stack->head = node;
   stack->current_node = node;
 }
 
@@ -176,13 +175,15 @@ test_push_safe()
 
   // TODO: We were here
   // Do some work
-  printf("asd");
   stack = malloc(sizeof(stack_t));
   int task = 0;
   while(task < 10) {
-    stack_push(stack, &task);
+    stack_push(&task);
     task++;
   }
+
+
+  assert(stack->current_node->task == 9);
 
   // check if the stack is in a consistent state
   int res = assert(stack_check(stack));
@@ -197,9 +198,26 @@ int
 test_pop_safe()
 {
   // Same as the test above for parallel pop operation
+  stack = malloc(sizeof(stack_t));
+  int task = 0;
+  while(task < 10) {
+    stack_push(&task);
+    task++;
+  }
 
-  // For now, this test always fails
-  return 0;
+  while(task > 7) {
+    stack_pop();
+    task--;
+  }
+
+  assert(stack->current_node->task == 6);
+  
+  while(stack->current_node != NULL) {
+    stack_pop();
+  }
+
+  int res = assert(stack_check(stack));
+  return res;
 }
 
 // 3 Threads should be enough to raise and detect the ABA problem
@@ -308,7 +326,6 @@ setbuf(stdout, NULL);
   test_init();
 
   test_run(test_cas);
-
   test_run(test_push_safe);
   test_run(test_pop_safe);
   test_run(test_aba);

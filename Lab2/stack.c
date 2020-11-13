@@ -54,9 +54,8 @@ stack_check(stack_t *stack)
 	// This test should always pass 
 
   // Test TODO: We were here
-  node_t* prev_ptr = stack->current_node->prev;
-  node_t* next_ptr;
-  int counter = 1;
+  node_t* prev_ptr = stack->current_node;
+  int counter = 0;
   while(prev_ptr != NULL) {
     prev_ptr = prev_ptr->prev;
     counter++;
@@ -70,17 +69,17 @@ stack_check(stack_t *stack)
 }
 
 int /* Return the type you prefer */
-stack_push(stack_t* stack, int* task)
+stack_push(int* task)
 {
   struct node* new_node = (struct node*)malloc(sizeof(struct node));
-  //new_node->next = NULL;
   
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   new_node->task = *task;
+  pthread_mutex_lock(&mutex);
   new_node->prev = stack->current_node;
-  //stack->current_node->next = new_node;
   stack->current_node = new_node;
+  pthread_mutex_unlock(&mutex);
 
 
 #elif NON_BLOCKING == 1
@@ -99,16 +98,17 @@ stack_push(stack_t* stack, int* task)
 }
 
 int /* Return the type you prefer */
-stack_pop(stack_t* stack)
+stack_pop()
 {
 
   if(stack->current_node == NULL) return 1;
 
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
+  pthread_mutex_lock(&mutex);
   node_t* old_node = stack->current_node;
   stack->current_node = old_node->prev;
-  //stack->current_node->next = NULL;
+  pthread_mutex_unlock(&mutex);
   free(old_node);
 
 #elif NON_BLOCKING == 1

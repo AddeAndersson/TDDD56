@@ -30,7 +30,6 @@
 struct node
 {
   int task;
-  //struct node* next;
   struct node* prev;
 };
 typedef struct node node_t;
@@ -42,9 +41,13 @@ struct stack
 typedef struct stack stack_t;
 
 
-int stack_push(stack_t*, int*);
-int stack_pop(stack_t*);
+stack_t *stack;
+pthread_mutex_t mutex;
+
+int init_mutex();
+int stack_push(int*);
+int stack_pop();
 
 /* Use this to check if your stack is in a consistent state from time to time */
-int stack_check(stack_t *stack);
+int stack_check();
 #endif /* STACK_H */
