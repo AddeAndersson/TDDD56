@@ -53,7 +53,7 @@ stack_check(stack_t *stack)
 	// Use assert() to check if your stack is in a state that makes sens
 	// This test should always pass 
 
-  // Test TODO: We were here
+  // Test
   node_t* prev_ptr = stack->current_node;
   int counter = 0;
   while(prev_ptr != NULL) {
@@ -72,10 +72,10 @@ int /* Return the type you prefer */
 stack_push(int* task)
 {
   struct node* new_node = (struct node*)malloc(sizeof(struct node));
+  new_node->task = *task;
   
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
-  new_node->task = *task;
   pthread_mutex_lock(&mutex);
   new_node->prev = stack->current_node;
   stack->current_node = new_node;
@@ -83,6 +83,11 @@ stack_push(int* task)
 
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
+  node_t* current_node;
+  do {
+    current_node = stack->current_node;
+    new_node->prev = current_node;
+  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)new_node));
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack
@@ -112,6 +117,12 @@ stack_pop()
 
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
+   node_t* current_node;
+   node_t* new_current_node;
+  do {
+    current_node = stack->current_node;
+    //new_current_node = (current_node != NULL) ? current_node : NULL;
+  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)current_node->prev));
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack

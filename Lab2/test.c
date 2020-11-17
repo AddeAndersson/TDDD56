@@ -174,6 +174,7 @@ test_push_safe()
   // several threads push concurrently to it
   // TODO: We were here
   // Do some work
+
   stack = malloc(sizeof(stack_t));
   int task = 0;
   while(task < 10) {
@@ -228,6 +229,22 @@ test_aba()
 #if NON_BLOCKING == 1 || NON_BLOCKING == 2
   int success, aba_detected = 0;
   // Write here a test for the ABA problem
+
+  //TODO:
+  // Stack(A,B,C)
+  // Thread 1:
+  // Pop()
+  // Lock() then CAS (Maybe sleep)
+  // Thread 2:
+  // Pop()
+  // Pop()
+  // Push(A)
+  // Unlock()
+
+  // Tread 1:
+  // CAS will now fail since B is deleted
+  
+
   success = aba_detected;
   return success;
 #else
