@@ -435,7 +435,7 @@ stack_pool_init();
   // Print out results
   for (i = 0; i < NB_THREADS; i++)
     {
-        printf("Thread %d time: %f\n", i, timediff(&t_start[i], &t_stop[i]));
+        printf("Thread %d time: %f\n", i, timediff(&t_start[i], &t_stop[i])*1000000);
     }
 #endif
 
