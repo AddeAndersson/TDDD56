@@ -5,20 +5,20 @@
  *  Copyright 2011 Nicolas Melot
  *
  * This file is part of TDDD56.
- * 
+ *
  *     TDDD56 is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU General Public License as published by
  *     the Free Software Foundation, either version 3 of the License, or
  *     (at your option) any later version.
- * 
+ *
  *     TDDD56 is distributed in the hope that it will be useful,
  *     but WITHOUT ANY WARRANTY; without even the implied warranty of
  *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *     GNU General Public License for more details.
- * 
+ *
  *     You should have received a copy of the GNU General Public License
  *     along with TDDD56. If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 #include <stdio.h>
@@ -98,14 +98,15 @@ stack_measure_pop(void* arg)
   {
     stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
     int i;
-
+    
     clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
     for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
       {
         // See how fast your implementation can pop MAX_PUSH_POP elements in parallel
+        stack_pop();
       }
     clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
-
+    
     return NULL;
   }
 #elif MEASURE == 2
@@ -114,11 +115,12 @@ stack_measure_push(void* arg)
 {
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   int i;
-
+  int task = 0;
   clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
   for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
     {
         // See how fast your implementation can push MAX_PUSH_POP elements in parallel
+        stack_push(&task);
     }
   clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
 
@@ -144,13 +146,16 @@ test_setup()
 
   // Allocate a new stack and reset its values
   stack = malloc(sizeof(stack_t));
-  node_t* node = malloc(sizeof(node_t));
+  //node_t* node = malloc(sizeof(node_t));
 
   // Reset explicitely all members to a well-known initial value
   // For instance (to be deleted as your stack design progresses):
-  node->prev = NULL;
-  node->task = -1;
-  stack->current_node = node;
+  int task = -1;
+  stack->current_node = NULL;
+  //stack_push(&task);
+    for(size_t i = 0; i < 1000; ++i) {
+    stack_push(&task);
+  }
 }
 
 void
@@ -158,13 +163,18 @@ test_teardown()
 {
   // Do not forget to free your stacks after each test
   // to avoid memory leaks
+  while(!stack_pop()) {
+    ;
+  }
   free(stack);
+
 }
 
 void
 test_finalize()
 {
   // Destroy properly your test batch
+  
 }
 
 int
@@ -175,7 +185,7 @@ test_push_safe()
   // TODO: We were here
   // Do some work
 
-  stack = malloc(sizeof(stack_t));
+  //stack = malloc(sizeof(stack_t));
   int task = 0;
   while(task < 10) {
     stack_push(&task);
@@ -198,7 +208,7 @@ int
 test_pop_safe()
 {
   // Same as the test above for parallel pop operation
-  stack = malloc(sizeof(stack_t));
+  //stack = malloc(sizeof(stack_t));
   int task = 0;
   while(task < 10) {
     stack_push(&task);
@@ -211,7 +221,7 @@ test_pop_safe()
   }
 
   assert(stack->current_node->task == 6);
-  
+
   while(stack->current_node != NULL) {
     stack_pop();
   }
@@ -223,13 +233,49 @@ test_pop_safe()
 // 3 Threads should be enough to raise and detect the ABA problem
 #define ABA_NB_THREADS 3
 
+void* push_and_pop(void* arg) {
+  int task = 0;
+  for(int i = 0; i < 100; ++i) {
+    stack_pop();
+    stack_pop();
+    stack_push(&task);
+  }
+
+  return NULL;
+}
+
 int
 test_aba()
 {
 #if NON_BLOCKING == 1 || NON_BLOCKING == 2
-  int success, aba_detected = 0;
-  // Write here a test for the ABA problem
 
+  //stack = malloc(sizeof(stack_t));
+
+  int success, aba_detected = 1;
+  // Write here a test for the ABA problem
+  pthread_t thread[ABA_NB_THREADS];
+  size_t i;
+  for (i = 0; i < ABA_NB_THREADS; i++)
+  {
+    pthread_create(&thread[i], NULL, &push_and_pop, NULL);
+  }
+
+  for (i = 0; i < ABA_NB_THREADS; i++)
+  {
+    pthread_join(thread[i], NULL);
+  }
+
+  
+
+  node_t* prev_ptr = stack->current_node;
+  int counter = 0;
+  while(prev_ptr != NULL) {
+    prev_ptr = prev_ptr->prev;
+    counter++;
+  }
+
+  printf("%i", counter);
+  aba_detected = counter != 701;
   //TODO:
   // Stack(A,B,C)
   // Thread 1:
@@ -243,7 +289,7 @@ test_aba()
 
   // Tread 1:
   // CAS will now fail since B is deleted
-  
+
 
   success = aba_detected;
   return success;
@@ -303,7 +349,7 @@ test_cas()
 
   counter = 0;
   pthread_attr_init(&attr);
-  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE); 
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
   pthread_mutexattr_init(&mutex_attr);
   pthread_mutex_init(&lock, &mutex_attr);
 
@@ -348,6 +394,19 @@ setbuf(stdout, NULL);
 
   test_finalize();
 #else
+
+  stack = malloc(sizeof(stack_t));
+  //node_t* node = malloc(sizeof(node_t));
+
+  // Reset explicitely all members to a well-known initial value
+  // For instance (to be deleted as your stack design progresses):
+  int task = -1;
+  stack->current_node = NULL;
+    for(size_t i = 0; i < MAX_PUSH_POP; ++i) {
+    stack_push(&task);
+  }
+
+
   int i;
   pthread_t thread[NB_THREADS];
   pthread_attr_t attr;
@@ -377,6 +436,7 @@ setbuf(stdout, NULL);
         printf("Thread %d time: %f\n", i, timediff(&t_start[i], &t_stop[i]));
     }
 #endif
+  free(stack);
 
   return 0;
 }
