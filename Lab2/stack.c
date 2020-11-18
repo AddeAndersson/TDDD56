@@ -45,6 +45,11 @@
 #endif
 #endif
 
+
+// Create and allocate pool
+// static node_t* pool[NB_THREADS];
+// _Atomic static size_t cur;
+
 int
 stack_check(stack_t *stack)
 {
@@ -69,18 +74,13 @@ stack_check(stack_t *stack)
 }
 
 int /* Return the type you prefer */
-stack_push(int* task)
+stack_push(node_t* n)
 {
-  struct node* new_node = (struct node*)malloc(sizeof(struct node));
-  //node_t* new_node;
-  new_node->prev = NULL;
-  new_node->task = *task;
-  
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   pthread_mutex_lock(&mutex);
-  new_node->prev = stack->current_node;
-  stack->current_node = new_node;
+  n->prev = stack->current_node;
+  stack->current_node = n;
   pthread_mutex_unlock(&mutex);
 
 #elif NON_BLOCKING == 1
@@ -88,8 +88,8 @@ stack_push(int* task)
   node_t* current_node;
   do {
     current_node = stack->current_node;
-    new_node->prev = current_node;
-  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)new_node));
+    n->prev = current_node;
+  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)n));
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack
@@ -104,31 +104,77 @@ stack_push(int* task)
 }
 
 int /* Return the type you prefer */
-stack_pop()
+stack_pop(node_t** n)
 {
   node_t* top = stack->current_node;
+  
   if(top == NULL) return 1;
-
 
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   pthread_mutex_lock(&mutex);
+  *n = stack->current_node;
   stack->current_node = top->prev;
   pthread_mutex_unlock(&mutex);
-
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
-   node_t* current_node;
+  node_t* current_node;
+  node_t* prev;
   do {
     current_node = stack->current_node;
-  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)current_node->prev));
+    prev = current_node->prev;
+  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)prev));
+
+  *n = current_node;
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack
 #endif
 
-  //if(top) free(top);
-  //top = NULL;
   return 0;
 }
 
+void
+stack_pool_init()
+{
+  stack = malloc(sizeof(stack_t));
+  for(size_t i = 0; i < NB_THREADS; ++i) {
+    for(size_t j = 0; j < MAX_PUSH_POP; ++j) {
+      node_t *n = (node_t*)malloc(sizeof(node_t));
+      n->prev =  pool[i];
+      n->task = j;
+      pool[i] = n;
+    }
+    //pool[i] = malloc(sizeof(node_t) * (MAX_PUSH_POP / NB_THREADS));
+  } 
+}
+
+void
+stack_pool_free() {
+  // Free stack
+  while(stack->current_node != NULL) {
+    node_t* n = stack->current_node;
+    stack->current_node = n->prev;
+    free(n);
+  }
+
+  free(stack);
+
+  // Free pool
+  for(int i = 0; i < NB_THREADS; ++i) {
+    while(pool[i] != NULL) {
+      node_t* n = pool[i];
+      pool[i] = pool[i]->prev;
+      free(n);
+    }
+  }
+}
+
+void
+stack_fill(size_t size) {
+  for(int i = 0; i < size; ++i) {
+      node_t *n = (node_t*)malloc(sizeof(node_t));
+      n->task = i;
+      stack_push(n);
+  }
+}

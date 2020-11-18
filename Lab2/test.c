@@ -100,10 +100,13 @@ stack_measure_pop(void* arg)
     int i;
     
     clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
-    for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
+    for (i = 0; i < MAX_PUSH_POP / NB_THREADS; ++i)
       {
         // See how fast your implementation can pop MAX_PUSH_POP elements in parallel
-        stack_pop();
+        node_t *n;
+        stack_pop(&n);
+        n->prev = pool[args->id];
+        pool[args->id] = n;
       }
     clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
     
@@ -115,12 +118,14 @@ stack_measure_push(void* arg)
 {
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   int i;
-  int task = 0;
+  //int task = 0;
   clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
   for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
     {
-        // See how fast your implementation can push MAX_PUSH_POP elements in parallel
-        stack_push(&task);
+        // See how fast your implementation can push MAX_PUSH_POP  in parallel
+        node_t *n = pool[args->id];
+        pool[args->id] = n->prev;
+        stack_push(n);
     }
   clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
 
@@ -145,7 +150,7 @@ test_setup()
   data = DATA_VALUE;
 
   // Allocate a new stack and reset its values
-  stack = malloc(sizeof(stack_t));
+  //stack = malloc(sizeof(stack_t));
   //node_t* node = malloc(sizeof(node_t));
 
   // Reset explicitely all members to a well-known initial value
@@ -163,10 +168,10 @@ test_teardown()
 {
   // Do not forget to free your stacks after each test
   // to avoid memory leaks
-  while(!stack_pop()) {
-    ;
-  }
-  free(stack);
+  // while(!stack_pop()) {
+  //   ;
+  // }
+  // free(stack);
 
 }
 
@@ -210,20 +215,21 @@ test_pop_safe()
   // Same as the test above for parallel pop operation
   //stack = malloc(sizeof(stack_t));
   int task = 0;
+  node_t* n; // Temporary
   while(task < 10) {
-    stack_push(&task);
+    stack_push(n);
     task++;
   }
 
   while(task > 7) {
-    stack_pop();
+    stack_pop(n);
     task--;
   }
 
   assert(stack->current_node->task == 6);
 
   while(stack->current_node != NULL) {
-    stack_pop();
+    stack_pop(n);
   }
 
   int res = assert(stack_check(stack));
@@ -235,9 +241,10 @@ test_pop_safe()
 
 void* push_and_pop(void* arg) {
   int task = 0;
+  node_t* n; // Temporary
   for(int i = 0; i < 100; ++i) {
-    stack_pop();
-    stack_pop();
+    stack_pop(n);
+    stack_pop(n);
     stack_push(&task);
   }
 
@@ -275,7 +282,7 @@ test_aba()
   }
 
   printf("%i", counter);
-  aba_detected = counter != 701;
+  aba_detected = counter != 700;
   //TODO:
   // Stack(A,B,C)
   // Thread 1:
@@ -383,7 +390,11 @@ int
 main(int argc, char **argv)
 {
 setbuf(stdout, NULL);
-// MEASURE == 0 -> run unit tests
+
+// Initialize stack and pools
+stack_pool_init();
+
+// MEASURE == 0 -> run unit test
 #if MEASURE == 0
   test_init();
 
@@ -394,36 +405,27 @@ setbuf(stdout, NULL);
 
   test_finalize();
 #else
-
-  stack = malloc(sizeof(stack_t));
-  //node_t* node = malloc(sizeof(node_t));
-
   // Reset explicitely all members to a well-known initial value
   // For instance (to be deleted as your stack design progresses):
-  int task = -1;
-  stack->current_node = NULL;
-    for(size_t i = 0; i < MAX_PUSH_POP; ++i) {
-    stack_push(&task);
-  }
-
 
   int i;
   pthread_t thread[NB_THREADS];
   pthread_attr_t attr;
   stack_measure_arg_t arg[NB_THREADS];
   pthread_attr_init(&attr);
-
+  
   clock_gettime(CLOCK_MONOTONIC, &start);
   for (i = 0; i < NB_THREADS; i++)
     {
       arg[i].id = i;
 #if MEASURE == 1
+
+      stack_fill(MAX_PUSH_POP);
       pthread_create(&thread[i], &attr, stack_measure_pop, (void*)&arg[i]);
 #else
       pthread_create(&thread[i], &attr, stack_measure_push, (void*)&arg[i]);
 #endif
     }
-
   for (i = 0; i < NB_THREADS; i++)
     {
       pthread_join(thread[i], NULL);
@@ -436,7 +438,9 @@ setbuf(stdout, NULL);
         printf("Thread %d time: %f\n", i, timediff(&t_start[i], &t_stop[i]));
     }
 #endif
-  //free(stack);
+
+  // Free stack and pools
+  stack_pool_free();
 
   return 0;
 }
