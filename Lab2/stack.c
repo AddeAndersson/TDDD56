@@ -72,6 +72,8 @@ int /* Return the type you prefer */
 stack_push(int* task)
 {
   struct node* new_node = (struct node*)malloc(sizeof(struct node));
+  //node_t* new_node;
+  new_node->prev = NULL;
   new_node->task = *task;
   
 #if NON_BLOCKING == 0
@@ -104,30 +106,29 @@ stack_push(int* task)
 int /* Return the type you prefer */
 stack_pop()
 {
+  node_t* top = stack->current_node;
+  if(top == NULL) return 1;
 
-  if(stack->current_node == NULL) return 1;
 
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   pthread_mutex_lock(&mutex);
-  node_t* old_node = stack->current_node;
-  stack->current_node = old_node->prev;
+  stack->current_node = top->prev;
   pthread_mutex_unlock(&mutex);
-  free(old_node);
 
 #elif NON_BLOCKING == 1
   // Implement a harware CAS-based stack
    node_t* current_node;
-   node_t* new_current_node;
   do {
     current_node = stack->current_node;
-    //new_current_node = (current_node != NULL) ? current_node : NULL;
   } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)current_node->prev));
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack
 #endif
 
+  //if(top) free(top);
+  //top = NULL;
   return 0;
 }
 
