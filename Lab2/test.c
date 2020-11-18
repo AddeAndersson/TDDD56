@@ -436,7 +436,7 @@ setbuf(stdout, NULL);
         printf("Thread %d time: %f\n", i, timediff(&t_start[i], &t_stop[i]));
     }
 #endif
-  free(stack);
+  //free(stack);
 
   return 0;
 }
