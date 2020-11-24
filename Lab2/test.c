@@ -66,6 +66,7 @@ typedef int data_t;
 #define DATA_VALUE 5
 
 data_t data;
+node_t* first_node; // Used to test ABA
 
 #ifndef NDEBUG
 int
@@ -117,18 +118,20 @@ void*
 stack_measure_push(void* arg)
 {
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
-  int i;
-  //int task = 0;
-  clock_gettime(CLOCK_MONOTONIC, &t_start[args->id]);
-  for (i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
-    {
-        // See how fast your implementation can push MAX_PUSH_POP  in parallel
-        assert(args->id < NB_THREADS);
-        node_t *n = pool[args->id];
-        pool[args->id] = n->prev;
-        stack_push(n);
-    }
-  clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
+  int id = args->id;
+  clock_gettime(CLOCK_MONOTONIC, &t_start[id]);
+  for (int i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
+  {
+      // See how fast your implementation can push MAX_PUSH_POP  in parallel
+      //printf("ID: %i ", id);
+      //printf("Task: %i - ID: %i\n", pool[id]->task, id);
+      //assert(n != NULL);
+      node_t* n = pool[id];
+      //if(n == NULL) continue;
+      pool[id] = n->prev;
+      stack_push(n);
+  }
+  clock_gettime(CLOCK_MONOTONIC, &t_stop[id]);
 
   return NULL;
 }
@@ -141,7 +144,7 @@ test_init()
 {
   // Initialize your test batch
   pthread_mutex_init(&mutex, NULL);
-
+  //stack_fill(MAX_PUSH_POP);
 }
 
 void
@@ -183,6 +186,17 @@ test_finalize()
   
 }
 
+void
+print_stack() 
+{
+  node_t* prev_ptr = stack->current_node;
+  while(prev_ptr != NULL) {
+    printf("%i -> ", prev_ptr->task);
+    prev_ptr = prev_ptr->prev;
+  }
+  printf("\n");
+}
+
 int
 test_push_safe()
 {
@@ -213,39 +227,45 @@ test_push_safe()
 int
 test_pop_safe()
 {
-  // Same as the test above for parallel pop operation
-  //stack = malloc(sizeof(stack_t));
-  // int task = 0;
-  // node_t* n; // Temporary
-  // while(task < 10) {
-  //   stack_push(n);
-  //   task++;
-  // }
-
-  // while(task > 7) {
-  //   stack_pop(n);
-  //   task--;
-  // }
-
-  assert(stack->current_node->task == 6);
-
-  // while(stack->current_node != NULL) {
-  //   stack_pop(n);
-  // }
-
-  int res = assert(stack_check(stack));
-  return res;
+  return 1 && assert(stack->current_node != NULL);
 }
 
 // 3 Threads should be enough to raise and detect the ABA problem
-#define ABA_NB_THREADS 3
+#define ABA_NB_THREADS 2
 
-void* push_and_pop(void* arg) {
-  node_t* n; // Temporary
-  for(int i = 0; i < 100; ++i) {
-    stack_pop(&n);
-    stack_pop(&n);
-    stack_push(n);
+void* push_and_pop(int id) {
+
+  //stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
+  printf("\n");
+
+  if(id == 0) {
+    node_t *n;
+    printf("Thread: %i started pop()\n", id);
+    stack_pop_aba(&n);
+    printf("Thread: %i stopped pop() on: %i\n", id, n->task);
+    print_stack();
+    n->prev = pool[id];
+    pool[id] = n;
+  }
+
+
+
+  if(id == 1) {
+    for(int j = 0; j < 2; ++j) {
+      node_t *n;
+      printf("Thread: %i started pop()\n", id);
+      stack_pop(&n);
+      printf("Thread: %i stopped pop() on: %i\n", id, n->task);
+      print_stack();
+      n->prev = pool[id];
+      pool[id] = n;
+    }
+      node_t *n = first_node;
+      //pool[id] = n->prev;
+      printf("Thread: %i started push() on %i\n", id, n->task);
+      stack_push(n);
+      printf("Thread: %i stopped push()\n", id);
+      print_stack();
   }
 
   return NULL;
@@ -256,15 +276,16 @@ test_aba()
 {
 #if NON_BLOCKING == 1 || NON_BLOCKING == 2
 
-  //stack = malloc(sizeof(stack_t));
-
+  print_stack();
   int success, aba_detected = 1;
   // Write here a test for the ABA problem
   pthread_t thread[ABA_NB_THREADS];
+  //thread_test_cas_args_t args[ABA_NB_THREADS];
   size_t i;
   for (i = 0; i < ABA_NB_THREADS; i++)
   {
-    pthread_create(&thread[i], NULL, &push_and_pop, NULL);
+    //args[i].id = i;
+    pthread_create(&thread[i], NULL, &push_and_pop, i);
   }
 
   for (i = 0; i < ABA_NB_THREADS; i++)
@@ -272,33 +293,8 @@ test_aba()
     pthread_join(thread[i], NULL);
   }
 
-  
-
-  node_t* prev_ptr = stack->current_node;
-  int counter = 0;
-  while(prev_ptr != NULL) {
-    prev_ptr = prev_ptr->prev;
-    counter++;
-  }
-
-  printf("%i", counter);
-  aba_detected = counter != 700;
-  //TODO:
-  // Stack(A,B,C)
-  // Thread 1:
-  // Pop()
-  // Lock() then CAS (Maybe sleep)
-  // Thread 2:
-  // Pop()
-  // Pop()
-  // Push(A)
-  // Unlock()
-
-  // Tread 1:
-  // CAS will now fail since B is deleted
-
-
   success = aba_detected;
+  printf("\nABA detected!\n");
   return success;
 #else
   // No ABA is possible with lock-based synchronization. Let the test succeed only
@@ -392,12 +388,23 @@ main(int argc, char **argv)
 setbuf(stdout, NULL);
 
 // Initialize stack and pools
-stack_pool_init();
+stack_pool_init(NB_THREADS, MAX_PUSH_POP);
 
 // MEASURE == 0 -> run unit test
 #if MEASURE == 0
   test_init();
 
+  node_t *A = (node_t*)malloc(sizeof(node_t));
+  node_t *B = (node_t*)malloc(sizeof(node_t));
+  node_t *C = (node_t*)malloc(sizeof(node_t));
+  C->task = 2;
+  B->task = 1;
+  A->task = 0;
+  stack_push(C);
+  stack_push(B);
+  stack_push(A);
+  first_node = A;
+  
   test_run(test_cas);
   test_run(test_push_safe);
   test_run(test_pop_safe);
@@ -437,10 +444,10 @@ stack_pool_init();
     {
         printf("Thread %d time: %f\n", i, timediff(&t_start[i], &t_stop[i])*1000000);
     }
-#endif
-
+    
   // Free stack and pools
-  stack_pool_free();
+  stack_pool_free(NB_THREADS);
+#endif
 
   return 0;
 }

@@ -43,6 +43,17 @@ cas(size_t* reg, size_t oldval, size_t newval)
   return oldval;
 }
 
+inline size_t
+cas_aba(size_t* reg, size_t oldval, size_t newval)
+{
+  sleep(1);
+  asm volatile( "lock; cmpxchg %2, %1":
+                "=a"(oldval):
+                "m"(*reg), "r"(newval), "a"(oldval):
+                "memory" );
+  return oldval;
+}
+
 #elif defined __GNUC__
 
 inline size_t

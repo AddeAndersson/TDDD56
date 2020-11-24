@@ -41,15 +41,15 @@ struct stack
 typedef struct stack stack_t;
 
 stack_t *stack;
-node_t *pool[NB_THREADS];
+node_t *pool[8]; //Number of threads
 pthread_mutex_t mutex;
 
 int init_mutex();
 int stack_push(node_t*);
 int stack_pop(node_t**);
 
-void stack_pool_free();
-void stack_pool_init();
+void stack_pool_free(size_t);
+void stack_pool_init(size_t, size_t);
 void stack_fill(size_t);
 
 /* Use this to check if your stack is in a consistent state from time to time */

@@ -38,6 +38,7 @@ a successful cas() operation copies the new value to *reg, but NOT new to
 */
 #if NON_BLOCKING == 1
 size_t cas(size_t* reg, size_t old, size_t new);
+size_t cas_aba(size_t* reg, size_t old, size_t new);
 #elif NON_BLOCKING == 2
 #include <pthread.h>
 size_t software_cas(size_t * reg, size_t old, size_t new, pthread_mutex_t* lock);

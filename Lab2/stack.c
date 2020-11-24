@@ -134,23 +134,51 @@ stack_pop(node_t** n)
   return 0;
 }
 
+int /* Return the type you prefer */
+stack_pop_aba(node_t** n)
+{
+  node_t* top = stack->current_node;
+  
+  if(top == NULL) return 1;
+
+#if NON_BLOCKING == 0
+  return 0;
+#elif NON_BLOCKING == 1
+  // Implement a harware CAS-based stack
+  node_t* current_node;
+  node_t* prev;
+  do {
+    current_node = stack->current_node;
+    prev = current_node->prev;
+  } while((size_t)current_node != cas_aba((size_t*)&stack->current_node, (size_t)current_node, (size_t)prev));
+  //if(prev->task == 1) printf("ABA edtected");
+  *n = current_node;
+#else
+  /*** Optional ***/
+  // Implement a software CAS-based stack
+#endif
+
+  return 0;
+}
+
 void
-stack_pool_init()
+stack_pool_init(size_t nb_threads, size_t max_push_pop)
 {
   stack = malloc(sizeof(stack_t));
-  for(size_t i = 0; i < NB_THREADS; ++i) {
-    for(size_t j = 0; j < MAX_PUSH_POP; ++j) {
-      node_t *n = (node_t*)malloc(sizeof(node_t));
+  stack->current_node =  NULL;
+  for(size_t i = 0; i < nb_threads; ++i) {
+    pool[i] = NULL;
+    for(size_t j = 0; j < max_push_pop; ++j) {
+      node_t* n = (node_t*)malloc(sizeof(node_t));
       n->prev =  pool[i];
       n->task = j;
       pool[i] = n;
     }
-    //pool[i] = malloc(sizeof(node_t) * (MAX_PUSH_POP / NB_THREADS));
   } 
 }
 
 void
-stack_pool_free() {
+stack_pool_free(size_t nb_threads) {
   // Free stack
   while(stack->current_node != NULL) {
     node_t* n = stack->current_node;
@@ -161,7 +189,7 @@ stack_pool_free() {
   free(stack);
 
   // Free pool
-  for(int i = 0; i < NB_THREADS; ++i) {
+  for(int i = 0; i < nb_threads; ++i) {
     while(pool[i] != NULL) {
       node_t* n = pool[i];
       pool[i] = pool[i]->prev;
