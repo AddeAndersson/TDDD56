@@ -45,8 +45,8 @@ node_t *pool[8]; //Number of threads
 pthread_mutex_t mutex;
 
 int init_mutex();
-int stack_push(node_t*);
-int stack_pop(node_t**);
+int stack_push(int task, int id);
+int stack_pop(int id);
 
 void stack_pool_free(size_t);
 void stack_pool_init(size_t, size_t);

@@ -59,23 +59,26 @@ stack_check(stack_t *stack)
 	// This test should always pass 
 
   // Test
-  node_t* prev_ptr = stack->current_node;
+  /*node_t* prev_ptr = stack->current_node;
   int counter = 0;
   while(prev_ptr != NULL) {
     prev_ptr = prev_ptr->prev;
     counter++;
-  }
+  }*/
 
 	// This test fails if the task is not allocated or if the allocation failed
-	assert(stack != NULL);
+	//assert(stack != NULL);
 #endif
 	// The stack is always fine
 	return 1;
 }
 
 int /* Return the type you prefer */
-stack_push(node_t* n)
+stack_push(int task, int id)
 {
+  node_t* n = pool[id];
+  pool[id] = n->prev;
+  n->task = task;
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   pthread_mutex_lock(&mutex);
@@ -98,22 +101,23 @@ stack_push(node_t* n)
   // Debug practice: you can check if this operation results in a stack in a consistent check
   // It doesn't harm performance as sanity check are disabled at measurement time
   // This is to be updated as your implementation progresses
+  //pool[id] = n->prev;
   stack_check(stack);
 
   return 0;
 }
 
 int /* Return the type you prefer */
-stack_pop(node_t** n)
+stack_pop(int id)
 {
   node_t* top = stack->current_node;
-  
+  node_t *n;
   if(top == NULL) return 1;
 
 #if NON_BLOCKING == 0
   // Implement a lock_based stack
   pthread_mutex_lock(&mutex);
-  *n = stack->current_node;
+  n = stack->current_node;
   stack->current_node = top->prev;
   pthread_mutex_unlock(&mutex);
 #elif NON_BLOCKING == 1
@@ -125,7 +129,10 @@ stack_pop(node_t** n)
     prev = current_node->prev;
   } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)prev));
 
-  *n = current_node;
+  
+  n = current_node;
+  n->prev = pool[id];
+  pool[id] = n;
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack
@@ -135,10 +142,10 @@ stack_pop(node_t** n)
 }
 
 int /* Return the type you prefer */
-stack_pop_aba(node_t** n)
+stack_pop_aba(int id)
 {
   node_t* top = stack->current_node;
-  
+  node_t *n;
   if(top == NULL) return 1;
 
 #if NON_BLOCKING == 0
@@ -151,8 +158,10 @@ stack_pop_aba(node_t** n)
     current_node = stack->current_node;
     prev = current_node->prev;
   } while((size_t)current_node != cas_aba((size_t*)&stack->current_node, (size_t)current_node, (size_t)prev));
-  //if(prev->task == 1) printf("ABA edtected");
-  *n = current_node;
+
+  n = current_node;
+  n->prev = pool[id];
+  pool[id] = n;
 #else
   /*** Optional ***/
   // Implement a software CAS-based stack
@@ -201,8 +210,8 @@ stack_pool_free(size_t nb_threads) {
 void
 stack_fill(size_t size) {
   for(int i = 0; i < size; ++i) {
-      node_t *n = (node_t*)malloc(sizeof(node_t));
-      n->task = i;
-      stack_push(n);
+      //node_t *n = (node_t*)malloc(sizeof(node_t));
+      //n->task = i;
+      stack_push(i, 0);
   }
 }
