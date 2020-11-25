@@ -43,7 +43,6 @@ int main(int argc, const char* argv[])
 	/* SkePU containers */
 	skepu::Vector<float> v1(size, 1.0f), v2(size, 2.0f), v3(size);
 
-
 	/* Compute and measure time */
 	float resComb, resSep;
 
