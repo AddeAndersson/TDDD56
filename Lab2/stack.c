@@ -108,6 +108,37 @@ stack_push(int task, int id)
 }
 
 int /* Return the type you prefer */
+stack_push_node(node_t *n)
+{
+#if NON_BLOCKING == 0
+  // Implement a lock_based stack
+  pthread_mutex_lock(&mutex);
+  n->prev = stack->current_node;
+  stack->current_node = n;
+  pthread_mutex_unlock(&mutex);
+
+#elif NON_BLOCKING == 1
+  // Implement a harware CAS-based stack
+  node_t* current_node;
+  do {
+    current_node = stack->current_node;
+    n->prev = current_node;
+  } while((size_t)current_node != cas((size_t*)&stack->current_node, (size_t)current_node, (size_t)n));
+#else
+  /*** Optional ***/
+  // Implement a software CAS-based stack
+#endif
+
+  // Debug practice: you can check if this operation results in a stack in a consistent check
+  // It doesn't harm performance as sanity check are disabled at measurement time
+  // This is to be updated as your implementation progresses
+  stack_check(stack);
+
+  return 0;
+
+}
+
+int /* Return the type you prefer */
 stack_pop(int id)
 {
   node_t* top = stack->current_node;

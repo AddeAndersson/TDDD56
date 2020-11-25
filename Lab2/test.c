@@ -237,15 +237,12 @@ test_pop_safe()
 #define ABA_NB_THREADS 2
 
 void* push_and_pop(int id) {
-
-  
-
   //stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   printf("\n");
   if(id == 0) {
     printf("Thread: %i started pop()\n", id);
-    stack_pop_aba(0);
-    //printf("Thread: %i stopped pop() on: %i\n", id, n->task);
+    stack_pop_aba(id);
+    printf("Thread: %i stopped pop() on: \n", id);
     print_stack();
   }
 
@@ -255,13 +252,13 @@ void* push_and_pop(int id) {
     for(int j = 0; j < 2; ++j) {
       printf("Thread: %i started pop()\n", id);
       stack_pop(id);
-      //printf("Thread: %i stopped pop() on: %i\n", id, n->task);
+      printf("Thread: %i stopped pop() on: \n", id);
       print_stack();
     }
-      //node_t *n = first_node;
-      //pool[id] = n->prev;
-      //printf("Thread: %i started push() on %i\n", id, n->task);
-      stack_push(0, 1);
+      node_t *n = first_node;
+      pool[0] = NULL;
+      printf("Thread: %i started push() on: \n", id);
+      stack_push_node(first_node);
       printf("Thread: %i stopped push()\n", id);
       print_stack();
   }
@@ -392,16 +389,16 @@ stack_pool_init(NB_THREADS, MAX_PUSH_POP);
 #if MEASURE == 0
   test_init();
 
-  //node_t *A = (node_t*)malloc(sizeof(node_t));
-  //node_t *B = (node_t*)malloc(sizeof(node_t));
-  //node_t *C = (node_t*)malloc(sizeof(node_t));
-  //C->task = 2;
-  //B->task = 1;
-  //A->task = 0;
-  stack_push(2, 0);
-  stack_push(1, 0);
-  //stack_push(0, 1);
-  //first_node = A;
+  node_t *A = (node_t*)malloc(sizeof(node_t));
+  node_t *B = (node_t*)malloc(sizeof(node_t));
+  node_t *C = (node_t*)malloc(sizeof(node_t));
+  C->task = 2;
+  B->task = 1;
+  A->task = 0;
+  stack_push_node(C);
+  stack_push_node(B);
+  stack_push_node(A);
+  first_node = A;
   
   
   test_run(test_cas);
