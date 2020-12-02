@@ -21,6 +21,7 @@ Yes, we see a time reduction by a magnitude of about 25 for the GPU-backends, th
 ## Averaging filters
 
 * _Question 2.1_: Which version of the averaging filter (unified, separable) is the most efficient? Why?
+
 Seperable is more efficient since it only has to access the radius*2 elements per pixel compared to radius^2.
 
 ## Median filtering
