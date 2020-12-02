@@ -54,7 +54,7 @@ unsigned char gaussian_kernel_1d_row(skepu::Region1D<unsigned char> m, const ske
         float res = 0;
 
         for(int i = -m.oi; i <= m.oi; i += elemPerPx)
-                res += m(i) * stencil[i];
+                res += m(i);// * stencil[i];
 
         return res;
 }
@@ -65,7 +65,7 @@ unsigned char gaussian_kernel_1d_col(skepu::Region1D<unsigned char> m, const ske
         float res = 0;
 
         for(int i = -m.oi; i <= m.oi; ++i)
-                res += m(i) * stencil[i];
+                res += m(i);// * stencil[i];
 
         return res;
 }
