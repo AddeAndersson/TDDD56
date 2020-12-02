@@ -29,16 +29,16 @@ unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<uns
 		}
 	}
 	float temp = 0;
-	/*unsigned int n = 2*image.oi+1;
+	unsigned int n = 2*image.oi+1;
 	for(int i = 0; i < n; i++) {
 		for(int j = 0; j < n-i-1; j++) {
-			if(sorted.data[j] > sorted.data[j+1]) {
-				temp = sorted.data[j];
-				sorted.data[j] = sorted.data[j+1];
-				sorted.data[j+1] = temp;
+			if(sorted[j] > sorted[j+1]) {
+				temp = sorted[j];
+				sorted[j] = sorted[j+1];
+				sorted[j+1] = temp;
 			}
 		}
-	}*/
+	}
 
 	return sorted[image.oi];
 }
