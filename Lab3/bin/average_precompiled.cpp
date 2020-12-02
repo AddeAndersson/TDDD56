@@ -1,3 +1,6 @@
+#define SKEPU_PRECOMPILED
+#define SKEPU_OPENMP
+#define SKEPU_OPENCL
 /**************************
 ** TDDD56 Lab 3
 ***************************
@@ -84,6 +87,130 @@ unsigned char gaussian_kernel(skepu::Region1D<unsigned char> m, const skepu::Vec
 }
 
 
+
+struct skepu_userfunction_skepu_skel_0conv_g_col_gaussian_kernel_1d_col
+{
+constexpr static size_t totalArity = 2;
+constexpr static size_t outArity = 1;
+constexpr static bool indexed = 0;
+using IndexType = void;
+using ElwiseArgs = std::tuple<>;
+using ContainerArgs = std::tuple<const skepu::Vec<float>>;
+using UniformArgs = std::tuple<>;
+typedef std::tuple<skepu::ProxyTag::Default> ProxyTags;
+constexpr static skepu::AccessMode anyAccessMode[] = {
+skepu::AccessMode::Read, };
+
+using Ret = unsigned char;
+
+constexpr static bool prefersMatrix = 0;
+
+#define SKEPU_USING_BACKEND_OMP 1
+#undef VARIANT_CPU
+#undef VARIANT_OPENMP
+#undef VARIANT_CUDA
+#define VARIANT_CPU(block)
+#define VARIANT_OPENMP(block) block
+#define VARIANT_CUDA(block)
+static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(skepu::Region1D<unsigned char> m, const skepu::Vec<float> stencil)
+{
+        //float scaling = 1.0 / (m.oi * 2 + 1);
+        float res = 0;
+	unsigned int idx = 0;
+        for(int i = -m.oi; i <= m.oi; ++i) {
+                res += m(i) * stencil.data[idx];
+		idx++;
+	}
+
+        return res;
+}
+#undef SKEPU_USING_BACKEND_OMP
+
+#define SKEPU_USING_BACKEND_CPU 1
+#undef VARIANT_CPU
+#undef VARIANT_OPENMP
+#undef VARIANT_CUDA
+#define VARIANT_CPU(block) block
+#define VARIANT_OPENMP(block)
+#define VARIANT_CUDA(block) block
+static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char CPU(skepu::Region1D<unsigned char> m, const skepu::Vec<float> stencil)
+{
+        //float scaling = 1.0 / (m.oi * 2 + 1);
+        float res = 0;
+	unsigned int idx = 0;
+        for(int i = -m.oi; i <= m.oi; ++i) {
+                res += m(i) * stencil.data[idx];
+		idx++;
+	}
+
+        return res;
+}
+#undef SKEPU_USING_BACKEND_CPU
+};
+
+#include "average_precompiled_OverlapKernel_gaussian_kernel_1d_col_cl_source.inl"
+
+struct skepu_userfunction_skepu_skel_1conv_g_row_gaussian_kernel_1d_row
+{
+constexpr static size_t totalArity = 3;
+constexpr static size_t outArity = 1;
+constexpr static bool indexed = 0;
+using IndexType = void;
+using ElwiseArgs = std::tuple<>;
+using ContainerArgs = std::tuple<const skepu::Vec<float>>;
+using UniformArgs = std::tuple<unsigned long>;
+typedef std::tuple<skepu::ProxyTag::Default> ProxyTags;
+constexpr static skepu::AccessMode anyAccessMode[] = {
+skepu::AccessMode::Read, };
+
+using Ret = unsigned char;
+
+constexpr static bool prefersMatrix = 0;
+
+#define SKEPU_USING_BACKEND_OMP 1
+#undef VARIANT_CPU
+#undef VARIANT_OPENMP
+#undef VARIANT_CUDA
+#define VARIANT_CPU(block)
+#define VARIANT_OPENMP(block) block
+#define VARIANT_CUDA(block)
+static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char OMP(skepu::Region1D<unsigned char> m, const skepu::Vec<float> stencil, unsigned long elemPerPx)
+{
+        //float scaling = 1.0 / (m.oi / elemPerPx * 2 + 1);
+        float res = 0;
+	unsigned int idx = 0;
+        for(int i = -m.oi; i <= m.oi; i += elemPerPx) {
+                res += m(i) * stencil.data[idx];
+		idx++;
+	}
+
+        return res;
+}
+#undef SKEPU_USING_BACKEND_OMP
+
+#define SKEPU_USING_BACKEND_CPU 1
+#undef VARIANT_CPU
+#undef VARIANT_OPENMP
+#undef VARIANT_CUDA
+#define VARIANT_CPU(block) block
+#define VARIANT_OPENMP(block)
+#define VARIANT_CUDA(block) block
+static inline SKEPU_ATTRIBUTE_FORCE_INLINE unsigned char CPU(skepu::Region1D<unsigned char> m, const skepu::Vec<float> stencil, unsigned long elemPerPx)
+{
+        //float scaling = 1.0 / (m.oi / elemPerPx * 2 + 1);
+        float res = 0;
+	unsigned int idx = 0;
+        for(int i = -m.oi; i <= m.oi; i += elemPerPx) {
+                res += m(i) * stencil.data[idx];
+		idx++;
+	}
+
+        return res;
+}
+#undef SKEPU_USING_BACKEND_CPU
+};
+
+#include "average_precompiled_OverlapKernel_gaussian_kernel_1d_row_cl_source.inl"
 int main(int argc, char* argv[])
 {
 	if (argc < 5)
@@ -156,11 +283,11 @@ int main(int argc, char* argv[])
 		skepu::Vector<float> stencil = sampleGaussian(radius);
 		for(int i = 0; i < stencil.size(); i++) std::cout << stencil[i] << ", " << std::endl;
 		// skeleton instance, etc here (remember to set backend)
-		auto conv_g_row = skepu::MapOverlap(gaussian_kernel_1d_row);
+		skepu::backend::MapOverlap1D<skepu_userfunction_skepu_skel_1conv_g_row_gaussian_kernel_1d_row, bool, bool, bool, bool, CLWrapperClass_average_precompiled_OverlapKernel_gaussian_kernel_1d_row> conv_g_row(false, false, false, false);
                 conv_g_row.setOverlap(radius * imageInfo.elementsPerPixel);
                 conv_g_row.setOverlapMode(skepu::Overlap::RowWise);
 
-                auto conv_g_col = skepu::MapOverlap(gaussian_kernel_1d_col);
+                skepu::backend::MapOverlap1D<skepu_userfunction_skepu_skel_0conv_g_col_gaussian_kernel_1d_col, bool, bool, bool, bool, CLWrapperClass_average_precompiled_OverlapKernel_gaussian_kernel_1d_col> conv_g_col(false, false, false, false);
                 conv_g_col.setOverlap(radius);
                 conv_g_col.setOverlapMode(skepu::Overlap::ColWise);
 
