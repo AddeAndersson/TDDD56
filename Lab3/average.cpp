@@ -28,7 +28,7 @@
 
 unsigned char average_kernel_1d_row(skepu::Region1D<unsigned char> m, size_t elemPerPx)
 {
-	float scaling = 1.0 / (m.oi / elemPerPx * 2 + 1);
+	float scaling = 1.0 / (m.oi * elemPerPx * 2 + elemPerPx);
 	float res = 0;
 
 	for(int i = -m.oi; i <= m.oi; ++i)
