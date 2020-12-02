@@ -19,12 +19,18 @@ It strongly depends on the implementation of SkePU, which backend is most effici
 Yes, we see a time reduction by a magnitude of about 25 for the GPU-backends, this is due to the caching caused by the cold run. After the cold run the data is already in memory which means that for the next run the memcpy can return instantly. Since this problem is very memory-bound, we see a huge boost in performance. The same goes for the CPU-backend OpenMP but the performance gain is smaller since the data does not have to go thorugh the PCI-bus to the GPU, which is relatively slow.
 
 ## Averaging filters
+### Box filter
+![Average filter](result33x33-separable.png)
+### Gaussian filter
+![Gaussian filter](result33x33-gaussian.png)
 
 * _Question 2.1_: Which version of the averaging filter (unified, separable) is the most efficient? Why?
 
 Seperable is more efficient since it only has to access the radius*2 elements per pixel compared to radius^2.
 
 ## Median filtering
+
+![Median filter](result33x33-median.png)
 
 * _Question 3.1_: In data-parallel skeletons like ``MapOverlap``, all elements are processed independently of each other. Is this a good fit for the median filter? Why/why not?
 
