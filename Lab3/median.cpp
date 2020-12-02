@@ -17,7 +17,7 @@
 #include "support.h"
 
 
-unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<float> sorted, size_t elemPerPx)
+unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<unsigned char> sorted, size_t elemPerPx)
 {
 	// your code here
 	unsigned int idx = 0;
@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	skepu::Matrix<unsigned char> outputMatrix(imageInfo.height, imageInfo.width * imageInfo.elementsPerPixel, 120);
 	
 	// Skeleton instance
-	skepu::Vector<float> sorted(radius+1+(radius+1)*imageInfo.elementsPerPixel);
+	skepu::Vector<unsigned char> sorted(radius+1+(radius+1)*imageInfo.elementsPerPixel);
 	auto calculateMedian = skepu::MapOverlap(median_kernel);
 	calculateMedian.setOverlap(radius, radius  * imageInfo.elementsPerPixel);
 	
