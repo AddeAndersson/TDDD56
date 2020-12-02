@@ -23,7 +23,7 @@ unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<flo
 	unsigned int idx = 0;
 	for(int y = -image.oi; y <= image.oi; y++) {
 		for(int x = -image.oj; x <= image.oj; x += elemPerPx) {
-			sorted.data[idx] = image(y,x);
+			sorted[idx] = image(y,x);
 			idx++;
 		}
 	}
@@ -39,7 +39,7 @@ unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<flo
 		}
 	}*/
 
-	return sorted.data[image.oi];
+	return sorted[image.oi];
 }
 
 
