@@ -1,9 +1,1 @@
-/clang_headers
-/data
-/include
-/reference
-/bin
-Makefile
-Makefile.include
-Makefile.in
-bandwidthMeasures.dat
+
