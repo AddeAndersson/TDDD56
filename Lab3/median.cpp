@@ -17,9 +17,27 @@
 #include "support.h"
 
 
-unsigned char median_kernel(skepu::Region2D<unsigned char> image, size_t elemPerPx)
+unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<float> sorted, size_t elemPerPx)
 {
 	// your code here
+	unsigned int idx = 0;
+	for(int y = -image.oi; y <= image.oi; y++) {
+		for(int x = -image.oj; x <= image.oj; x += elemPerPx) {
+			sorted.data[idx] = image(y,x);
+		}
+	}
+	float temp = 0;
+	unsigned int n = 2*image.oi+1;
+	for(int i = 0; i < n; i++) {
+		for(int j = 0; j < n-i-1; j++) {
+			if(sorted.data[j] > sorted.data[j+1]) {
+				temp = sorted.data[j];
+				sorted.data[j] = sorted.data[j+1];
+				sorted.data[j+1] = temp;
+			}
+		}
+	}
+			
 	return image(0,0);
 }
 
@@ -52,12 +70,13 @@ int main(int argc, char* argv[])
 	skepu::Matrix<unsigned char> outputMatrix(imageInfo.height, imageInfo.width * imageInfo.elementsPerPixel, 120);
 	
 	// Skeleton instance
+	skepu::Vector<float> sorted(2*radius+1);
 	auto calculateMedian = skepu::MapOverlap(median_kernel);
 	calculateMedian.setOverlap(radius, radius  * imageInfo.elementsPerPixel);
 	
 	auto timeTaken = skepu::benchmark::measureExecTime([&]
 	{
-		calculateMedian(outputMatrix, inputMatrix, imageInfo.elementsPerPixel);
+		calculateMedian(outputMatrix, inputMatrix, sorted, imageInfo.elementsPerPixel);
 	});
 
 	WritePngFileMatrix(outputMatrix, outputFileNamePad, colorType, imageInfo);
