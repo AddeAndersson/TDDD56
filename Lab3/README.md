@@ -28,6 +28,10 @@ Seperable is more efficient since it only has to access the radius*2 elements pe
 
 * _Question 3.1_: In data-parallel skeletons like ``MapOverlap``, all elements are processed independently of each other. Is this a good fit for the median filter? Why/why not?
 
+Yes, beacuse we only want to take the median of the elements inside of the filter-kernel, therefore we have to sort the elements differently in each kernel call.
+
 
 * _Question 3.2_:  Describe the sequence of instructions executed in your userfunction. Is it data dependent? What does this mean for e.g., automatic
 vectorization, or the GPU backend?
+
+It is data dependent since we first have to store the data in a local array then sort it, therefore it can't be vectorized automatically.
