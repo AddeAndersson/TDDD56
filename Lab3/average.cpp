@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 	// Separable version
 	// use conv.setOverlapMode(skepu::Overlap::[ColWise RowWise]);
 	// and conv.setOverlap(<integer>)
-	{
+	/*{
 		auto conv_row = skepu::MapOverlap(average_kernel_1d_row);
 		conv_row.setOverlap(radius * imageInfo.elementsPerPixel);
 		conv_row.setOverlapMode(skepu::Overlap::RowWise);
@@ -144,8 +144,8 @@ int main(int argc, char* argv[])
 
 		WritePngFileMatrix(outputMatrix, outputFile + "-separable.png", colorType, imageInfo);
 		std::cout << "Time for separable: " << (timeTaken.count() / 10E6) << "\n";
-	}
-
+	}*/
+	
 
 	// Separable gaussian
 	{
@@ -171,6 +171,8 @@ int main(int argc, char* argv[])
 		WritePngFileMatrix(outputMatrix, outputFile + "-gaussian.png", colorType, imageInfo);
 		std::cout << "Time for gaussian: " << (timeTaken.count() / 10E6) << "\n";
 	}
+
+	//for(int i = 0; i < 10; i++) std::cout << outputMatrix[i] << ", " << std::endl;
 
 
 
