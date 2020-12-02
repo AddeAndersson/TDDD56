@@ -38,7 +38,7 @@ unsigned char median_kernel(skepu::Region2D<unsigned char> image, skepu::Vec<flo
 		}
 	}
 			
-	return image(0,0);
+	return sorted[image.oi];
 }
 
 
