@@ -2,6 +2,9 @@
 
 ## Dot product
 
+![measureExecTime](data/graph1.png)
+![measureExecTimeIdempotent](data/graph2.png)
+
 * _Question 1.1_: Why does SkePU have a fused "fused" ``MapReduce`` when there already are separate ``Map`` and ``Reduce`` skeletons?
 
 It is generally faster to combine multiple operations in a single kernel, and since Map + Reduce is a common sequence, SkePU has a fused version.
@@ -20,9 +23,9 @@ Yes, we see a time reduction by a magnitude of about 25 for the GPU-backends, th
 
 ## Averaging filters
 ### Box filter
-![Average filter](result33x33-separable.png)
+![Average filter](data/result33x33-separable.png)
 ### Gaussian filter
-![Gaussian filter](result33x33-gaussian.png)
+![Gaussian filter](data/result33x33-gaussian.png)
 
 * _Question 2.1_: Which version of the averaging filter (unified, separable) is the most efficient? Why?
 
@@ -30,7 +33,7 @@ Seperable is more efficient since it only has to access the radius*2 elements pe
 
 ## Median filtering
 
-![Median filter](result33x33-median.png)
+![Median filter](data/result33x33-median.png)
 
 * _Question 3.1_: In data-parallel skeletons like ``MapOverlap``, all elements are processed independently of each other. Is this a good fit for the median filter? Why/why not?
 
