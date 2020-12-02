@@ -16,7 +16,7 @@
 
 #include "support.h"
 
-unsigned char average_kernel(skepu::Region2D<unsigned char> m, size_t elemPerPx)
+/*unsigned char average_kernel(skepu::Region2D<unsigned char> m, size_t elemPerPx)
 {
 	float scaling = 1.0 / ((m.oj/elemPerPx*2+1)*(m.oi*2+1));
 	float res = 0;
@@ -24,9 +24,9 @@ unsigned char average_kernel(skepu::Region2D<unsigned char> m, size_t elemPerPx)
 		for (int x = -m.oj; x <= m.oj; x += elemPerPx)
 			res += m(y, x);
 	return res * scaling;
-}
+}*/
 
-/*unsigned char average_kernel_1d_row(skepu::Region1D<unsigned char> m, size_t elemPerPx)
+unsigned char average_kernel_1d_row(skepu::Region1D<unsigned char> m, size_t elemPerPx)
 {
 	float scaling = 1.0 / (m.oi / elemPerPx * 2 + 1);
 	float res = 0;
@@ -46,7 +46,7 @@ unsigned char average_kernel_1d_col(skepu::Region1D<unsigned char> m)
 		res += m(i);
 
 	return res * scaling;
-}*/
+}
 
 
 
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 	std::stringstream ss;
 	ss << (2 * radius + 1) << "x" << (2 * radius + 1);
 	std::string outputFile = outputFileName + ss.str();
-
+	std::cout << "Result: " << outputFile << std::endl;
 	// Read the padded image into a matrix. Create the output matrix without padding.
 	// Padded version for 2D MapOverlap, non-padded for 1D MapOverlap
 	ImageInfo imageInfo;
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
 	// more containers...?
 
 	// Original version
-	{
+	/*{
 		auto conv = skepu::MapOverlap(average_kernel);
 		conv.setOverlap(radius, radius  * imageInfo.elementsPerPixel);
 
@@ -97,29 +97,29 @@ int main(int argc, char* argv[])
 
 		WritePngFileMatrix(outputMatrix, outputFile + "-average.png", colorType, imageInfo);
 		std::cout << "Time for combined: " << (timeTaken.count() / 10E6) << "\n";
-	}
+	}*/
 
 
 	// Separable version
 	// use conv.setOverlapMode(skepu::Overlap::[ColWise RowWise]);
 	// and conv.setOverlap(<integer>)
 	{
-		/*auto conv_row = skepu::MapOverlap(average_kernel_1d_row);
+		auto conv_row = skepu::MapOverlap(average_kernel_1d_row);
 		conv_row.setOverlap(radius * imageInfo.elementsPerPixel);
 		conv_row.setOverlapMode(skepu::Overlap::RowWise);
 
 		auto conv_col = skepu::MapOverlap(average_kernel_1d_col);
 		conv_col.setOverlap(radius);
 		conv_col.setOverlapMode(skepu::Overlap::ColWise);
-		*/
+		
 		auto timeTaken = skepu::benchmark::measureExecTime([&]
 		{
 			// your code here
-			//conv_row(outputMatrix, inputMatrixPad, imageInfo.elementsPerPixel);
-			//conv_col(outputMatrix, outputMatrix);
+			conv_row(outputMatrix, inputMatrix, imageInfo.elementsPerPixel);
+			conv_col(outputMatrix, outputMatrix);
 		});
 
-	//	WritePngFileMatrix(outputMatrix, outputFile + "-separable.png", colorType, imageInfo);
+		WritePngFileMatrix(outputMatrix, outputFile + "-separable.png", colorType, imageInfo);
 		std::cout << "Time for separable: " << (timeTaken.count() / 10E6) << "\n";
 	}
 
