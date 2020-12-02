@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
 		{
 			// your code here
 			conv_row(outputMatrix, inputMatrix, imageInfo.elementsPerPixel);
-			conv_col(outputMatrix, outputMatrix);
+			//conv_col(outputMatrix, outputMatrix);
 		});
 
 		WritePngFileMatrix(outputMatrix, outputFile + "-separable.png", colorType, imageInfo);
