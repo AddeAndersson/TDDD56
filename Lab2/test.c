@@ -104,10 +104,10 @@ stack_measure_pop(void* arg)
     for (i = 0; i < MAX_PUSH_POP / NB_THREADS; ++i)
       {
         // See how fast your implementation can pop MAX_PUSH_POP elements in parallel
-        node_t *n;
-        stack_pop(&n);
-        n->prev = pool[args->id];
-        pool[args->id] = n;
+        //node_t *n;
+        stack_pop(args->id);
+        //n->prev = pool[args->id];
+        //pool[args->id] = n;
       }
     clock_gettime(CLOCK_MONOTONIC, &t_stop[args->id]);
     
@@ -119,6 +119,7 @@ stack_measure_push(void* arg)
 {
   stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   int id = args->id;
+  int task = pool[id]->task;
   clock_gettime(CLOCK_MONOTONIC, &t_start[id]);
   for (int i = 0; i < MAX_PUSH_POP / NB_THREADS; i++)
   {
@@ -126,10 +127,12 @@ stack_measure_push(void* arg)
       //printf("ID: %i ", id);
       //printf("Task: %i - ID: %i\n", pool[id]->task, id);
       //assert(n != NULL);
-      node_t* n = pool[id];
+      //node_t* n = pool[id];
       //if(n == NULL) continue;
-      pool[id] = n->prev;
-      stack_push(n);
+ 
+      stack_push(task, id);
+             //printf("123");
+      //
   }
   clock_gettime(CLOCK_MONOTONIC, &t_stop[id]);
 
@@ -234,36 +237,28 @@ test_pop_safe()
 #define ABA_NB_THREADS 2
 
 void* push_and_pop(int id) {
-
   //stack_measure_arg_t *args = (stack_measure_arg_t*) arg;
   printf("\n");
-
   if(id == 0) {
-    node_t *n;
     printf("Thread: %i started pop()\n", id);
-    stack_pop_aba(&n);
-    printf("Thread: %i stopped pop() on: %i\n", id, n->task);
+    stack_pop_aba(id);
+    printf("Thread: %i stopped pop() on: \n", id);
     print_stack();
-    n->prev = pool[id];
-    pool[id] = n;
   }
 
 
 
   if(id == 1) {
     for(int j = 0; j < 2; ++j) {
-      node_t *n;
       printf("Thread: %i started pop()\n", id);
-      stack_pop(&n);
-      printf("Thread: %i stopped pop() on: %i\n", id, n->task);
+      stack_pop(id);
+      printf("Thread: %i stopped pop() on: \n", id);
       print_stack();
-      n->prev = pool[id];
-      pool[id] = n;
     }
       node_t *n = first_node;
-      //pool[id] = n->prev;
-      printf("Thread: %i started push() on %i\n", id, n->task);
-      stack_push(n);
+      pool[0] = NULL;
+      printf("Thread: %i started push() on: \n", id);
+      stack_push_node(first_node);
       printf("Thread: %i stopped push()\n", id);
       print_stack();
   }
@@ -400,10 +395,11 @@ stack_pool_init(NB_THREADS, MAX_PUSH_POP);
   C->task = 2;
   B->task = 1;
   A->task = 0;
-  stack_push(C);
-  stack_push(B);
-  stack_push(A);
+  stack_push_node(C);
+  stack_push_node(B);
+  stack_push_node(A);
   first_node = A;
+  
   
   test_run(test_cas);
   test_run(test_push_safe);
@@ -446,7 +442,7 @@ stack_pool_init(NB_THREADS, MAX_PUSH_POP);
     }
     
   // Free stack and pools
-  stack_pool_free(NB_THREADS);
+  //stack_pool_free(NB_THREADS);
 #endif
 
   return 0;
