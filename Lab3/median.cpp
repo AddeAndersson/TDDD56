@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 	skepu::Matrix<unsigned char> outputMatrix(imageInfo.height, imageInfo.width * imageInfo.elementsPerPixel, 120);
 	
 	// Skeleton instance
-	skepu::Vector<float> sorted(2*radius+1);
+	skepu::Vector<float> sorted(radius+1+(radius+1)*imageInfo.elementsPerPixel);
 	auto calculateMedian = skepu::MapOverlap(median_kernel);
 	calculateMedian.setOverlap(radius, radius  * imageInfo.elementsPerPixel);
 	
