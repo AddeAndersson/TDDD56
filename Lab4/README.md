@@ -19,16 +19,18 @@
 ### b) Larger data set and timing with CUDA Events
 * What happens if you use too many threads per block?
 
-It is unpredictable since there is a limit to the number of threads per block, since all threads of a block are expected to redide on the same CUDA core.
+    It is unpredictable since there is a limit to the number of threads per block, since all threads of a block are expected to redide on the same CUDA core.
 
 * At what data size is the GPU faster than the CPU?
 
-For 16x16 threads/block the GPU is faster at N>32 without memcpy and N>64 with memcpys, however the CPU is not multithreaded.
+    For 16x16 threads per block the GPU is faster at N>32 without memcpy and N>64 with memcpys, however the CPU is not multi-threaded.
 
 * What block size seems like a good choice? Compared to what?
 
-Somewhere in the middle, its program specific.
+    Somewhere in the middle, its program specific.
 
 * Write down your data size, block size and timing data for the best GPU performance you can get.
 
-N=256, 16x16 threads, (N/16)x(N/16) blocks aka 16x16, 0.0097ms
+    N=256, 16x16 threads, 16x16 blocks, 0.0097ms
+
+![Comparison](graph.png)
