@@ -15,7 +15,10 @@
 * How do you calculate the index in the array, using 2-dimensional blocks?
 
     The index can be calculated by using the code snippet:
-    `int idx = (threadIdx.x + (threadIdx.y * blockDim.x));`
+    ```
+    int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+    int idx = blockId * (blockDim.x * blockDim.y) + (threadIdx.x * blockDim.x) + threadIdx.y;
+     ```
 ### b) Larger data set and timing with CUDA Events
 * What happens if you use too many threads per block?
 
