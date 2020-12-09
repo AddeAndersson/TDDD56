@@ -32,7 +32,10 @@
 // Use these for setting shared memory size.
 #define maxKernelSizeX 32
 #define maxKernelSizeY 32
-
+#define block_size_x 32
+#define block_size_y 32
+#define kernel_size_x 3
+#define kernel_size_y 3
 
 __global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, const int kernelsizex, const int kernelsizey)
 { 
@@ -58,32 +61,35 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
 	int divby = (2*kernelsizex+1)*(2*kernelsizey+1); // Works for box filters only!
 	
 	// Filter kernel (simple box filter)
-	sumx=0;sumy=0;sumz=0;
-	for(dy=-kernelsizey;dy<=kernelsizey;dy++)
-		for(dx=-kernelsizex;dx<=kernelsizex;dx++)	
-		{
-			// Use max and min to avoid branching!
-			//int yy = min(max(y+dy, 0), kernelsizey-1);
-			//int xx = min(max(x+dx, 0), kernelsizex-1);
+	if(threadIdx.x >= kernelsizex && threadIdx.x < (blockDim.x - kernelsizex) &&
+		threadIdx.y >= kernelsizey && threadIdx.y < (blockDim.y - kernelsizey)) {
+		sumx=0;sumy=0;sumz=0;
+		for(dy=-kernelsizey;dy<=kernelsizey;dy++)
+			for(dx=-kernelsizex;dx<=kernelsizex;dx++)	
+			{
+				// Use max and min to avoid branching!
+				//int yy = min(max(y+dy, 0), kernelsizey-1);
+				//int xx = min(max(x+dx, 0), kernelsizex-1);
 
-			//int thread_nr = min(max(0, (thread_idx + ((y+dy)*blockDim.x) + x+dx)), divby);
-			//int kernel = (maxKernelSizeX * 2 + 1) * (maxKernelSizeY * 2 + 1) * 3;
-			
-			//int idx = max(min(thread_nr, divby), 0);
-			
-			// Clamp inside of kernel
-			int idx_x = min(max(threadIdx.x + dx, 0), blockDim.x-1);
-			int idx_y = min(max(threadIdx.y + dy, 0), blockDim.y-1);
-			
-			// Sum r,g,b channels
-			sumx += shared_mem[idx_x*3+0][idx_y]; // r
-			sumy += shared_mem[idx_x*3+1][idx_y]; // g
-			sumz += shared_mem[idx_x*3+2][idx_y]; // b
-			//printf("shared mem r %i\n", shared_mem[idx_x*3+1][idx_y]);
-		}
-	out[(y*imagesizex+x)*3+0] = sumx/divby;
-	out[(y*imagesizex+x)*3+1] = sumy/divby;
-	out[(y*imagesizex+x)*3+2] = sumz/divby;
+				//int thread_nr = min(max(0, (thread_idx + ((y+dy)*blockDim.x) + x+dx)), divby);
+				//int kernel = (maxKernelSizeX * 2 + 1) * (maxKernelSizeY * 2 + 1) * 3;
+				
+				//int idx = max(min(thread_nr, divby), 0);
+				
+				// Clamp inside of kernel
+				int idx_x = threadIdx.x + dx;
+				int idx_y = threadIdx.y + dy;
+				
+				// Sum r,g,b channels
+				sumx += shared_mem[idx_x*3+0][idx_y]; // r
+				sumy += shared_mem[idx_x*3+1][idx_y]; // g
+				sumz += shared_mem[idx_x*3+2][idx_y]; // b
+				//printf("shared mem r %i\n", shared_mem[idx_x*3+1][idx_y]);
+			}
+		out[(y*imagesizex+x)*3+0] = sumx/divby;
+		out[(y*imagesizex+x)*3+1] = sumy/divby;
+		out[(y*imagesizex+x)*3+2] = sumz/divby;
+	}
 }
 
 // Global variables for image data
@@ -106,7 +112,7 @@ void computeImages(int kernelsizex, int kernelsizey)
 	cudaMalloc( (void**)&dev_input, imagesizex*imagesizey*3);
 	cudaMemcpy( dev_input, image, imagesizey*imagesizex*3, cudaMemcpyHostToDevice );
 	cudaMalloc( (void**)&dev_bitmap, imagesizex*imagesizey*3);
-	dim3 numOfThreads( kernelsizex, kernelsizey);
+	dim3 numOfThreads( block_size_x, block_size_y);
 	dim3 grid((imagesizex+kernelsizex-1)/kernelsizex,(imagesizey+kernelsizey-1)/kernelsizey); // Maybe bad
 	filter<<<grid,numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
 	cudaThreadSynchronize();
@@ -163,7 +169,7 @@ int main( int argc, char** argv)
 
 	ResetMilli();
 
-	computeImages(32, 32);
+	computeImages(kernel_size_x, kernel_size_y);
 
 // You can save the result to a file like this:
 //	writeppm("out.ppm", imagesizey, imagesizex, pixels);
