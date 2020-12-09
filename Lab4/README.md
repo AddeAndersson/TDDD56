@@ -33,4 +33,40 @@
 
     N=256, 16x16 threads, 16x16 blocks, 0.0097ms
 
+### c) Coalescing
+
+*  How much performance did you lose by making data accesses non-coalesced?
+
+A little, not so much. For example N=1024 with 16x16 Threads executed in 0.095ms with bad coalescing and 0.055ms with good coalescing.
+
 ![Comparison](graph.png)
+
+## Part 3. Mandelbrot revisited
+
+* What were the main changes in order to make the Mandelbrot run in CUDA?
+
+    The main changes were to turn `computeFractal()` and `mandelbrot()` into device functions. We also had to update how the indices were gathered since we removed the nested loops. We also made changes to the draw function since it now had to call the kernel and execute memcpys. Finally, we handled the shared variables between the host and the device with `__managed__`.
+
+* How many blocks and threads did you use?
+    
+    We used 16x16 threads in each block and 32x32 blocks.
+
+* When you use the Complex class, what modifier did you have to use on the methods?
+
+    `__device__`
+
+* What performance did you get? How does that compare to the CPU solution?
+
+    The CUDA version runs much faster and with much less lag. 
+    * GPU: 180 iterations executes in approximately 1.1ms.
+    * CPU: 180 iteration executes in approximately 220ms.
+
+* What performance did you get with float vs double precision?
+
+    * GPU: 180 iterations executes in approximately 2.1ms for double precision.
+    * CPU: 180 iteration executes in approximately 225ms for double precision.
+
+* In Lab 1, load balancing was an important issue. Is that an issue here? Why/why not?
+
+    No, since we have a large amount of threads and the runtime can launch warps as long as there are avaiable threads.
+
