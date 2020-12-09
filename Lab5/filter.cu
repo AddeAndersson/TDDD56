@@ -34,16 +34,17 @@
 #define maxKernelSizeY 32
 #define block_size_x 32
 #define block_size_y 32
-#define kernel_size_x 3
-#define kernel_size_y 3
+#define kernel_size_x 10
+#define kernel_size_y 10
 
 __global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, const int kernelsizex, const int kernelsizey)
 { 
 	__shared__ unsigned char shared_mem[maxKernelSizeX * 3][maxKernelSizeY]; // shared memory
-	
+	int tile_w = blockDim.x - 2*kernelsizex;
+	int tile_h = blockDim.y - 2*kernelsizey;
 	// map from blockIdx to pixel position
-	int x = blockIdx.x * blockDim.x + threadIdx.x;
-	int y = blockIdx.y * blockDim.y + threadIdx.y;
+	int x = blockIdx.x * tile_w + threadIdx.x - kernelsizex;
+	int y = blockIdx.y * tile_h + threadIdx.y - kernelsizey;
 	
 	// clamp to edge of image
 	y = min(max(y, 0), imagesizey-1);
@@ -113,7 +114,7 @@ void computeImages(int kernelsizex, int kernelsizey)
 	cudaMemcpy( dev_input, image, imagesizey*imagesizex*3, cudaMemcpyHostToDevice );
 	cudaMalloc( (void**)&dev_bitmap, imagesizex*imagesizey*3);
 	dim3 numOfThreads( block_size_x, block_size_y);
-	dim3 grid((imagesizex+kernelsizex-1)/kernelsizex,(imagesizey+kernelsizey-1)/kernelsizey); // Maybe bad
+	dim3 grid(imagesizex/kernelsizex,imagesizey/kernelsizey);
 	filter<<<grid,numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
 	cudaThreadSynchronize();
 //	Check for errors!
