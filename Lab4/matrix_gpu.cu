@@ -4,26 +4,21 @@
 #include <stdio.h>
 
 __global__ void add_matrix_cuda(float *a, float *b, float *c) {
+	/*
 	int blockId = blockIdx.x + blockIdx.y * gridDim.x;
 	int idx = blockId * (blockDim.x * blockDim.y)+ (threadIdx.y * blockDim.x) + threadIdx.x;
-	c[idx] = a[idx] + b[idx];
-}
+	*/
 
-void add_matrix(float *a, float *b, float *c, int N)
-{
-	int index;
-	
-	for (int i = 0; i < N; i++)
-		for (int j = 0; j < N; j++)
-		{
-			index = i + j*N;
-			c[index] = a[index] + b[index];
-		}
+	// Part C
+	int blockId = blockIdx.x + blockIdx.y * gridDim.x;
+	int idx = blockId * (blockDim.x * blockDim.y) + (threadIdx.x * blockDim.x) + threadIdx.y;
+
+	c[idx] = a[idx] + b[idx];
 }
 
 int main()
 {
-	const int N = 2048;
+	const int N = 1024;
 	const int blocksize = 16;
 	const int size = N*N*sizeof(float);
 
@@ -52,19 +47,16 @@ int main()
 	cudaMalloc( (void**)&c, size );
 
 	float milliseconds = 0;
-	cudaEventRecord(start, 0); // Start timer
 	cudaMemcpy(a_dev, a, size, cudaMemcpyHostToDevice);
 	cudaMemcpy(b_dev, b, size, cudaMemcpyHostToDevice);
 	dim3 numOfThreads( blocksize, blocksize);
 	dim3 numOfBlocks( N / numOfThreads.x, N / numOfThreads.y );
-
-	add_matrix_cuda<<<numOfBlocks, numOfThreads>>>(a_dev, b_dev, c);
 	
-	cudaThreadSynchronize();
-	cudaMemcpy( res, c, size, cudaMemcpyDeviceToHost ); 
+	cudaEventRecord(start, 0); // Start timer
+	add_matrix_cuda<<<numOfBlocks, numOfThreads>>>(a_dev, b_dev, c);
 	cudaEventRecord(stop, 0); // End timer
 	cudaEventSynchronize(stop);
-
+	cudaMemcpy( res, c, size, cudaMemcpyDeviceToHost ); 
 	cudaEventElapsedTime(&milliseconds, start, stop);
 
 	cudaFree( a_dev );
@@ -85,3 +77,4 @@ int main()
 	delete[] b;
 	delete[] res;
 }
+n
