@@ -35,7 +35,7 @@
 
 * Compare the visual result to that of the box filter. Is the image LP-filtered with the weighted kernel noticeably better?
 
-    The gaussian filter produces an image that resembles the original image much closer. When using the box filter much more details are lost compared to using the gaussian filter.
+    The gaussian filter produces an image that resembles the original image much closer. When using the box filter small artifacts can be seen.
 
 * What was the difference in time to a box filter of the same size (5x5)?
 
@@ -43,7 +43,7 @@
 
 * If you want to make a weighted kernel customizable by weights from the host, how would you deliver the weights to the GPU?
 
-    For this problem `cudaMemcpy` can be used.
+    For this problem `cudaMemcpy` or `__managed__` can be used. 
 
 ## Part 4. Median filter
 
@@ -56,20 +56,12 @@
     Different filter sizes had similar results but the size 5x5 seperable is arguably the best for noise removal.
 
     ![Noise Removal](Images/5x5sep_med.png)
-    5x5
 
 * (non-mandatory): Compare the result of the separable and full median filters.
 
-    The images to the left are the 2d filter and the images to the right are the separable versions.
-    ![Comparsion1](Images/5x5comp.png)
-    5x5
-    ![Comparsion2](Images/9x9comp.png)
-    9x9
-    ![Comparsion3](Images/13x13comp.png)
-    13x13
+    ![Comparsion1](Images/2x2.png)
+    ![Comparsion2](Images/2x2.png)
+    ![Comparsion3](Images/2x2.png)
 
 * (non-mandatory): Compare the difference in performance of the separable and full median filters.
-
-    The following graph indicates that the separable version is much faster than the full 2d filter operation.
-    ![Comparison4](Images/Graph.png)
 
