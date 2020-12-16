@@ -1,8 +1,8 @@
 // Lab 5, image filters with CUDA.
 
 // Compile with a command-line similar to Lab 4:
-// nvcc filter.cu -c -arch=sm_30 -o filter.o
-// g++ filter.o milli.c readppm.c -lGL -lm -lcuda -lcudart -L/usr/local/cuda/lib -lglut -o filter
+// 
+// 
 // or (multicore lab)
 // nvcc filter.cu -c -arch=sm_20 -o filter.o
 // g++ filter.o milli.c readppm.c -lGL -lm -lcuda -L/usr/local/cuda/lib64 -lcudart -lglut -o filter
@@ -29,31 +29,41 @@
 #include "readppm.h"
 #include "milli.h"
 
+#include <chrono>
+#include <algorithm>
+#include <vector>
+
 // Use these for setting shared memory size.
 #define maxKernelSizeX 32
 #define maxKernelSizeY 32
 #define block_size_x 32
 #define block_size_y 32
-#define kernel_size_x 10
-#define kernel_size_y 10
+#define kernel_size_x 6
+#define kernel_size_y 6
 
-__global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, const int kernelsizex, const int kernelsizey)
+__global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, int kernelsizex, int kernelsizey)
 { 
-	__shared__ unsigned char shared_mem[maxKernelSizeX * 3][maxKernelSizeY]; // shared memory
+	__shared__ unsigned char shared_mem[maxKernelSizeY][maxKernelSizeX * 3]; // shared memory
+
+	// For separable
+	if(kernelsizex == 1) kernelsizex = 0; 
+	if(kernelsizey == 1) kernelsizey = 0;
+
 	int tile_w = blockDim.x - 2*kernelsizex;
 	int tile_h = blockDim.y - 2*kernelsizey;
 	// map from blockIdx to pixel position
 	int x = blockIdx.x * tile_w + threadIdx.x - kernelsizex;
-	int y = blockIdx.y * tile_h + threadIdx.y - kernelsizey;
+	int y = blockIdx.y * tile_h + threadIdx.y - kernelsizey;			
 	
 	// clamp to edge of image
 	y = min(max(y, 0), imagesizey-1);
 	x = min(max(x, 0), imagesizex-1);
 
+
     // Each thread copies its pixel of the block to shared memory
-	shared_mem[threadIdx.x*3+0][threadIdx.y] = image[(y*imagesizex+x)*3+0]; // r
-	shared_mem[threadIdx.x*3+1][threadIdx.y] = image[(y*imagesizex+x)*3+1]; // g
-	shared_mem[threadIdx.x*3+2][threadIdx.y] = image[(y*imagesizex+x)*3+2]; // b
+	shared_mem[threadIdx.y][threadIdx.x*3+0] = image[(y*imagesizex+x)*3+0]; // r
+	shared_mem[threadIdx.y][threadIdx.x*3+1] = image[(y*imagesizex+x)*3+1]; // g
+	shared_mem[threadIdx.y][threadIdx.x*3+2] = image[(y*imagesizex+x)*3+2]; // b
 	__syncthreads();
 
 	int dy, dx;
@@ -68,28 +78,149 @@ __global__ void filter(unsigned char *image, unsigned char *out, const unsigned 
 		for(dy=-kernelsizey;dy<=kernelsizey;dy++)
 			for(dx=-kernelsizex;dx<=kernelsizex;dx++)	
 			{
-				// Use max and min to avoid branching!
-				//int yy = min(max(y+dy, 0), kernelsizey-1);
-				//int xx = min(max(x+dx, 0), kernelsizex-1);
-
-				//int thread_nr = min(max(0, (thread_idx + ((y+dy)*blockDim.x) + x+dx)), divby);
-				//int kernel = (maxKernelSizeX * 2 + 1) * (maxKernelSizeY * 2 + 1) * 3;
-				
-				//int idx = max(min(thread_nr, divby), 0);
 				
 				// Clamp inside of kernel
 				int idx_x = threadIdx.x + dx;
 				int idx_y = threadIdx.y + dy;
 				
 				// Sum r,g,b channels
-				sumx += shared_mem[idx_x*3+0][idx_y]; // r
-				sumy += shared_mem[idx_x*3+1][idx_y]; // g
-				sumz += shared_mem[idx_x*3+2][idx_y]; // b
-				//printf("shared mem r %i\n", shared_mem[idx_x*3+1][idx_y]);
+				sumx += shared_mem[idx_y][idx_x*3+0]; // r
+				sumy += shared_mem[idx_y][idx_x*3+1]; // g
+				sumz += shared_mem[idx_y][idx_x*3+2]; // b
 			}
 		out[(y*imagesizex+x)*3+0] = sumx/divby;
 		out[(y*imagesizex+x)*3+1] = sumy/divby;
 		out[(y*imagesizex+x)*3+2] = sumz/divby;
+	}
+}
+
+__global__ void filter_gaussian(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, int kernelsizex, int kernelsizey)
+{ 
+	__shared__ unsigned char shared_mem[maxKernelSizeY][maxKernelSizeX * 3]; // shared memory
+
+	// For separable
+	if(kernelsizex == 1) kernelsizex = 0; 
+	if(kernelsizey == 1) kernelsizey = 0;
+
+	int tile_w = blockDim.x - 2*kernelsizex;
+	int tile_h = blockDim.y - 2*kernelsizey;
+	// map from blockIdx to pixel position
+	int x = blockIdx.x * tile_w + threadIdx.x - kernelsizex;
+	int y = blockIdx.y * tile_h + threadIdx.y - kernelsizey;			
+
+	// clamp to edge of image
+	y = min(max(y, 0), imagesizey-1);
+	x = min(max(x, 0), imagesizex-1);
+
+    // Each thread copies its pixel of the block to shared memory
+	shared_mem[threadIdx.y][threadIdx.x*3+0] = image[(y*imagesizex+x)*3+0]; // r
+	shared_mem[threadIdx.y][threadIdx.x*3+1] = image[(y*imagesizex+x)*3+1]; // g
+	shared_mem[threadIdx.y][threadIdx.x*3+2] = image[(y*imagesizex+x)*3+2]; // b
+	__syncthreads();
+
+	int dy, dx;
+	unsigned int sumx, sumy, sumz;
+	int weights[5] = { 1, 4, 6, 4, 1};
+	int divby = 16;
+
+	// Filter kernel (simple gaussian filter)
+	if(threadIdx.x >= kernelsizex && threadIdx.x < (blockDim.x - kernelsizex) &&
+		threadIdx.y >= kernelsizey && threadIdx.y < (blockDim.y - kernelsizey)) {
+		sumx=0;sumy=0;sumz=0;
+		for(dy=-kernelsizey;dy<=kernelsizey;dy++)
+			for(dx=-kernelsizex;dx<=kernelsizex;dx++)	
+			{
+				// Index weights
+				int i = (kernelsizex > 1) ? dx : dy;
+				// Clamp inside of kernel
+				int idx_x = threadIdx.x + dx;
+				int idx_y = threadIdx.y + dy;
+				// Sum r,g,b channels
+				sumx += shared_mem[idx_y][idx_x*3+0] * weights[i + 2]; // r
+				sumy += shared_mem[idx_y][idx_x*3+1] * weights[i + 2]; // g
+				sumz += shared_mem[idx_y][idx_x*3+2] * weights[i + 2]; // b
+			}
+		out[(y*imagesizex+x)*3+0] = sumx/divby;
+		out[(y*imagesizex+x)*3+1] = sumy/divby;
+		out[(y*imagesizex+x)*3+2] = sumz/divby;
+	}
+}
+
+__global__ void filter_median(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, int kernelsizex, int kernelsizey)
+{ 
+	__shared__ unsigned char shared_mem[maxKernelSizeY][maxKernelSizeX * 3]; // shared memory
+
+	// For separable
+	if(kernelsizex == 1) kernelsizex = 0; 
+	if(kernelsizey == 1) kernelsizey = 0;
+
+	int tile_w = blockDim.x - 2*kernelsizex;
+	int tile_h = blockDim.y - 2*kernelsizey;
+	// map from blockIdx to pixel position
+	int x = blockIdx.x * tile_w + threadIdx.x - kernelsizex;
+	int y = blockIdx.y * tile_h + threadIdx.y - kernelsizey;			
+
+	// clamp to edge of image
+	y = min(max(y, 0), imagesizey-1);
+	x = min(max(x, 0), imagesizex-1);
+
+    // Each thread copies its pixel of the block to shared memory
+	shared_mem[threadIdx.y][threadIdx.x*3+0] = image[(y*imagesizex+x)*3+0]; // r
+	shared_mem[threadIdx.y][threadIdx.x*3+1] = image[(y*imagesizex+x)*3+1]; // g
+	shared_mem[threadIdx.y][threadIdx.x*3+2] = image[(y*imagesizex+x)*3+2]; // b
+	__syncthreads();
+
+	
+	int dy, dx;
+	const int N = maxKernelSizeX*maxKernelSizeY+1;
+	unsigned char medianx[N];
+	unsigned char mediany[N];
+	unsigned char medianz[N];
+	int counter = 0;
+	
+	// Filter kernel (simple gaussian filter)
+	if(threadIdx.x >= kernelsizex && threadIdx.x < (blockDim.x - kernelsizex) &&
+	threadIdx.y >= kernelsizey && threadIdx.y < (blockDim.y - kernelsizey)) {
+		for(dy=-kernelsizey;dy<=kernelsizey;dy++)
+			for(dx=-kernelsizex;dx<=kernelsizex;dx++)	
+			{
+				// Clamp inside of kernel
+				int idx_x = threadIdx.x + dx;
+				int idx_y = threadIdx.y + dy;
+				// Sum r,g,b channels
+				medianx[counter] = shared_mem[idx_y][idx_x*3+0]; // r
+				mediany[counter] = shared_mem[idx_y][idx_x*3+1]; // g
+				medianz[counter] = shared_mem[idx_y][idx_x*3+2]; // b
+				counter++;
+			}
+
+		// Sort
+		float tempx = 0;
+		float tempy = 0;
+		float tempz = 0;
+		for(int i = 0; i < counter; i++) {
+			for(int j = 0; j < counter-i-1; j++) {
+				if(medianx[j] > medianx[j+1]) {
+					tempx = medianx[j];
+					medianx[j] = medianx[j+1];
+					medianx[j+1] = tempx;
+				}
+				if(mediany[j] > mediany[j+1]) {
+					tempy = mediany[j];
+					mediany[j] = mediany[j+1];
+					mediany[j+1] = tempy;
+				}
+				if(medianz[j] > medianz[j+1]) {
+					tempz = medianz[j];
+					medianz[j] = medianz[j+1];
+					medianz[j+1] = tempz;
+				}
+			}
+		}
+
+		out[(y*imagesizex+x)*3+0] = medianx[(counter-1)/2];
+		out[(y*imagesizex+x)*3+1] = mediany[(counter-1)/2];
+		out[(y*imagesizex+x)*3+2] = medianz[(counter-1)/2];
 	}
 }
 
@@ -111,17 +242,28 @@ void computeImages(int kernelsizex, int kernelsizey)
 
 	pixels = (unsigned char *) malloc(imagesizex*imagesizey*3);
 	cudaMalloc( (void**)&dev_input, imagesizex*imagesizey*3);
+	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now(); // Start time
 	cudaMemcpy( dev_input, image, imagesizey*imagesizex*3, cudaMemcpyHostToDevice );
 	cudaMalloc( (void**)&dev_bitmap, imagesizex*imagesizey*3);
+
 	dim3 numOfThreads( block_size_x, block_size_y);
-	dim3 grid(imagesizex/kernelsizex,imagesizey/kernelsizey);
-	filter<<<grid,numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
+	dim3 grid((imagesizex)/(numOfThreads.x - (2*kernel_size_x+2)),(imagesizey)/(numOfThreads.y - (2*kernel_size_y+2)));
+
+	filter_median<<<grid, numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
+	//filter_median<<<grid, numOfThreads>>>(dev_bitmap, dev_input, imagesizex, imagesizey, 1, kernelsizey); // Awful load balance
+
+	
 	cudaThreadSynchronize();
 //	Check for errors!
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess)
         printf("Error: %s\n", cudaGetErrorString(err));
 	cudaMemcpy( pixels, dev_bitmap, imagesizey*imagesizex*3, cudaMemcpyDeviceToHost );
+
+	std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now(); // End time
+	std::chrono::duration<float> time_span = std::chrono::duration_cast<std::chrono::duration<float>>(t2 - t1);
+	printf("Time elapsed: %fms\n", time_span.count()*1000);
+
 	cudaFree( dev_bitmap );
 	cudaFree( dev_input );
 }
@@ -159,7 +301,7 @@ int main( int argc, char** argv)
 	if (argc > 1)
 		image = readppm(argv[1], (int *)&imagesizex, (int *)&imagesizey);
 	else
-		image = readppm((char *)"maskros512.ppm", (int *)&imagesizex, (int *)&imagesizey);
+		image = readppm((char *)"maskros-noisy.ppm", (int *)&imagesizex, (int *)&imagesizey);
 
 	if (imagesizey >= imagesizex)
 		glutInitWindowSize( imagesizex*2, imagesizey );

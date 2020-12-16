@@ -29,9 +29,14 @@
 #include "readppm.h"
 #include "milli.h"
 
+#include <chrono>
+
 // Use these for setting shared memory size.
-#define maxKernelSizeX 10
-#define maxKernelSizeY 10
+#define maxKernelSizeX 32
+#define maxKernelSizeY 32
+
+#define block_size_x 10
+#define block_size_y 10
 
 
 __global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, const int kernelsizex, const int kernelsizey)
@@ -84,16 +89,26 @@ void computeImages(int kernelsizex, int kernelsizey)
 
 	pixels = (unsigned char *) malloc(imagesizex*imagesizey*3);
 	cudaMalloc( (void**)&dev_input, imagesizex*imagesizey*3);
+	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now(); // Start time
 	cudaMemcpy( dev_input, image, imagesizey*imagesizex*3, cudaMemcpyHostToDevice );
 	cudaMalloc( (void**)&dev_bitmap, imagesizex*imagesizey*3);
-	dim3 grid(imagesizex,imagesizey);
-	filter<<<grid,1>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
+	//dim3 grid(imagesizex,imagesizey);
+	dim3 numOfThreads( block_size_x, block_size_y);
+	dim3 grid(imagesizex/kernelsizex,imagesizey/kernelsizey);
+	dim3 test_tr(16,16);
+	dim3 test_grid(32,32);
+	filter<<<test_grid,test_tr>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
 	cudaThreadSynchronize();
 //	Check for errors!
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess)
         printf("Error: %s\n", cudaGetErrorString(err));
 	cudaMemcpy( pixels, dev_bitmap, imagesizey*imagesizex*3, cudaMemcpyDeviceToHost );
+
+	std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now(); // End time
+	std::chrono::duration<float> time_span = std::chrono::duration_cast<std::chrono::duration<float>>(t2 - t1);
+	printf("Time elapsed: %fms\n", time_span.count()*1000);
+
 	cudaFree( dev_bitmap );
 	cudaFree( dev_input );
 }
@@ -142,7 +157,7 @@ int main( int argc, char** argv)
 
 	ResetMilli();
 
-	computeImages(2, 2);
+	computeImages(block_size_x, block_size_y);
 
 // You can save the result to a file like this:
 //	writeppm("out.ppm", imagesizey, imagesizex, pixels);
