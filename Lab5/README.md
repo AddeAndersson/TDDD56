@@ -70,3 +70,6 @@
 
 * (non-mandatory): Compare the difference in performance of the separable and full median filters.
 
+    The following graph indicates that the separable version is much faster than the full 2d filter operation.
+    ![Comparison4](Images/Graph.png)
+
