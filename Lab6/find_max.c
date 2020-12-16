@@ -26,7 +26,7 @@
 #include "milli.h"
 
 // Size of data!
-#define kDataLength 1024
+#define kDataLength 1024*2048
 #define MAXPRINTSIZE 16
 
 unsigned int *generateRandomData(unsigned int length)
@@ -59,7 +59,7 @@ unsigned int *generateRandomData(unsigned int length)
 // __kernel void sort(__global unsigned int *data, const unsigned int length)
 void runKernel(cl_kernel kernel, int threads, cl_mem data, unsigned int length)
 {
-	size_t localWorkSize, globalWorkSize;
+  size_t localWorkSize, globalWorkSize;
 	cl_int ciErrNum = CL_SUCCESS;
 	
 	// Some reasonable number of blocks based on # of threads
@@ -74,7 +74,13 @@ void runKernel(cl_kernel kernel, int threads, cl_mem data, unsigned int length)
 	
 	// Run kernel
 	cl_event event;
-	ciErrNum = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
+  ciErrNum = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
+
+  for(int i = 0; i < globalWorkSize/localWorkSize; i++){
+    globalWorkSize /= 2;
+	  ciErrNum |= clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
+  }
+
 	printCLError(ciErrNum,9);
 	
 	// Synch
@@ -157,15 +163,27 @@ int main( int argc, char** argv)
   
   ResetMilli();
   find_max_cpu(data_cpu,length);
-  printf("CPU %f\n", GetSeconds());
+  printf("CPU %fms\n", GetSeconds()*1000);
 
   ResetMilli(); // You may consider moving this inside find_max_gpu(), to skip timing of data allocation.
   find_max_gpu(data_gpu,length);
-  printf("GPU %f\n", GetSeconds());
+  // for(int i = 0; i < length-localWorkSize; i += localWorkSize)
+  // {
+  //   if(data_gpu[i] < data_gpu[i + localWorkSize])
+  //     data_gpu[0] = data_gpu[i + localWorkSize];
+  //   else data_gpu[0] = data_gpu[i];
+  // }
+  printf("GPU %fms\n", GetSeconds()*1000);
 
   // Print part of result
+  printf("\nGPU data: ");
   for (int i=0;i<MAXPRINTSIZE;i++)
     printf("%d ", data_gpu[i]);
+  printf("\n");
+
+  printf("CPU data: ");
+  for (int i=0;i<MAXPRINTSIZE;i++)
+    printf("%d ", data_cpu[i]);
   printf("\n");
 
   if (data_cpu[0] != data_gpu[0])

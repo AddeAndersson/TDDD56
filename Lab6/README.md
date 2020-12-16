@@ -3,9 +3,15 @@
 
 * How is the communication between the host and the graphic card handled?
 
+    It is handled with OpenCL API calls.
+
 * What function executes your kernel?
 
+    `clEnqueueNDRangeKernel()`.
+
 * How does the kernel know what element to work on?
+
+    By creating buffers and sending it to the kernel as args.
 
 ## Part 2. Reduction
 
