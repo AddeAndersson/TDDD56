@@ -59,9 +59,18 @@
 
 * (non-mandatory): Compare the result of the separable and full median filters.
 
-    ![Comparsion1](Images/2x2.png)
-    ![Comparsion2](Images/2x2.png)
-    ![Comparsion3](Images/2x2.png)
+    The images to the left shows the full 2d median filtering operation and the images to the right presents the separable version.
+
+    ![Comparison1](Images/5x5comp.png)
+    5x5
+
+    ![Comparison2](Images/9x9comp.png)
+    9x9
+
+    ![Comparison3](Images/13x13comp.png)
+    13x13
 
 * (non-mandatory): Compare the difference in performance of the separable and full median filters.
 
+    The graph indicates that the separable version is much faster than the full 2d filter operation.
+    ![Comparison4](Images/Graph.png)
