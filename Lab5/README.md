@@ -56,12 +56,17 @@
     Different filter sizes had similar results but the size 5x5 seperable is arguably the best for noise removal.
 
     ![Noise Removal](Images/5x5sep_med.png)
+    5x5
 
 * (non-mandatory): Compare the result of the separable and full median filters.
 
-    ![Comparsion1](Images/2x2.png)
-    ![Comparsion2](Images/2x2.png)
-    ![Comparsion3](Images/2x2.png)
+    The images to the left are the 2d filter and the images to the right are the separable versions.
+    ![Comparsion1](Images/5x5comp.png)
+    5x5
+    ![Comparsion2](Images/9x9comp.png)
+    9x9
+    ![Comparsion3](Images/13x13comp.png)
+    13x13
 
 * (non-mandatory): Compare the difference in performance of the separable and full median filters.
 
