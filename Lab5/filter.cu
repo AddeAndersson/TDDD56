@@ -38,8 +38,8 @@
 #define maxKernelSizeY 32
 #define block_size_x 32
 #define block_size_y 32
-#define kernel_size_x 6
-#define kernel_size_y 6
+#define kernel_size_x 2
+#define kernel_size_y 2
 
 __global__ void filter(unsigned char *image, unsigned char *out, const unsigned int imagesizex, const unsigned int imagesizey, int kernelsizex, int kernelsizey)
 { 
@@ -249,8 +249,8 @@ void computeImages(int kernelsizex, int kernelsizey)
 	dim3 numOfThreads( block_size_x, block_size_y);
 	dim3 grid((imagesizex)/(numOfThreads.x - (2*kernel_size_x+2)),(imagesizey)/(numOfThreads.y - (2*kernel_size_y+2)));
 
-	filter_median<<<grid, numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, kernelsizey); // Awful load balance
-	//filter_median<<<grid, numOfThreads>>>(dev_bitmap, dev_input, imagesizex, imagesizey, 1, kernelsizey); // Awful load balance
+	filter_median<<<grid, numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, 1); // Awful load balance
+	filter_median<<<grid, numOfThreads>>>(dev_bitmap, dev_input, imagesizex, imagesizey, 1, kernelsizey); // Awful load balance
 
 	
 	cudaThreadSynchronize();
@@ -258,7 +258,7 @@ void computeImages(int kernelsizex, int kernelsizey)
     cudaError_t err = cudaGetLastError();
     if (err != cudaSuccess)
         printf("Error: %s\n", cudaGetErrorString(err));
-	cudaMemcpy( pixels, dev_bitmap, imagesizey*imagesizex*3, cudaMemcpyDeviceToHost );
+	cudaMemcpy( pixels, dev_input, imagesizey*imagesizex*3, cudaMemcpyDeviceToHost );
 
 	std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now(); // End time
 	std::chrono::duration<float> time_span = std::chrono::duration_cast<std::chrono::duration<float>>(t2 - t1);
