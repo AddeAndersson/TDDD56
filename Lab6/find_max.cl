@@ -4,10 +4,17 @@
 
 __kernel void find_max(__global unsigned int *data, const unsigned int length)
 { 
-  unsigned int pos = 0;
-  unsigned int val;
+  int gid = get_global_id(0);
+  int lid = get_local_id(0);
 
-  //Something should happen here
+  for(int i = ceil(get_local_size(0)/2.0); i >= 1; i = i/2) {
+      if(lid < i) {
+          data[gid] = max(data[gid + i], data[gid]);
+      }
+      barrier(CLK_LOCAL_MEM_FENCE);
+  }
 
-  data[get_global_id(0)]=get_global_id(0);
+  if(lid == 0) {
+      data[get_group_id(0)] = data[gid];
+  }
 }
