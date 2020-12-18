@@ -252,7 +252,6 @@ void computeImages(int kernelsizex, int kernelsizey)
 	filter_median<<<grid, numOfThreads>>>(dev_input, dev_bitmap, imagesizex, imagesizey, kernelsizex, 1); // Awful load balance
 	filter_median<<<grid, numOfThreads>>>(dev_bitmap, dev_input, imagesizex, imagesizey, 1, kernelsizey); // Awful load balance
 
-	
 	cudaThreadSynchronize();
 //	Check for errors!
     cudaError_t err = cudaGetLastError();
