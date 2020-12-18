@@ -17,17 +17,30 @@
 
 * What timing did you get for your GPU reduction? Compare it to the CPU version.
 
+    See graph below.
+
 * Try larger data size. On what size does the GPU version get faster, or at least comparable, to the GPU?
 
+    Around 1048576 to 2097152.
+    ![Graph](Graph.png)
+
 * How can you optimize this further? You should know at least one way.
+
+    You could for instance switch from GPU calculations to CPU calculations when the data size is reduced to some threshold.
 
 ## Part 3. Bitonic merge sort
 
 * Should each thread produce one output or two? Why?
 
+    Two beacuse it has to compare with another element.
+
 * How many items can you handle in one workgroup?
 
+    1024 since it is the maximum work group size.
+
 * What problem must be solved when you use more than one workgroup? How did you solve it?
+
+    The problem of merging must be solved.
 
 * What time do you get? Difference to the CPU? What is the break even size? What can you expect for a parallel CPU version? (Your conclusions here may vary between the labs.)
 

@@ -25,7 +25,7 @@
 #include "milli.h"
 
 // Size of data!
-#define kDataLength 1024
+#define kDataLength 1024*8
 #define MAXPRINTSIZE 16
 
 unsigned int *generateRandomData(unsigned int length)
@@ -73,7 +73,19 @@ void runKernel(cl_kernel kernel, int threads, cl_mem data, unsigned int length)
 	
 	// Run kernel
 	cl_event event;
-	ciErrNum = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
+
+  int j,k;
+  for (k=2;k<=length;k=2*k)
+  {
+    for (j=k>>1;j>0;j=j>>1)
+    {
+      ciErrNum |= clSetKernelArg(kernel, 1, sizeof(cl_uint), (void *) &j);
+      ciErrNum |= clSetKernelArg(kernel, 2, sizeof(cl_uint), (void *) &k);
+      ciErrNum = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
+    }
+  }
+   //}
+  
 	printCLError(ciErrNum,9);
 	
 	// Synch
@@ -176,11 +188,11 @@ int main( int argc, char** argv)
   
   ResetMilli();
   bitonic_cpu(data_cpu,length);
-  printf("CPU %f\n", GetSeconds());
+  printf("CPU %fms\n", GetSeconds()*1000);
 
   ResetMilli(); // You may consider moving this inside bitonic_gpu(), to skip timing of data allocation.
   bitonic_gpu(data_gpu,length);
-  printf("GPU %f\n", GetSeconds());
+  printf("GPU %fms\n", GetSeconds()*1000);
 
   // Print part of result
   for (int i=0;i<MAXPRINTSIZE;i++)
