@@ -36,13 +36,16 @@
 
 * How many items can you handle in one workgroup?
 
-    1024 since it is the maximum work group size.
+    2048 since 1024 is the maximum work group size and each thread can produce two outputs.
 
 * What problem must be solved when you use more than one workgroup? How did you solve it?
 
     The problem of merging must be solved.
 
 * What time do you get? Difference to the CPU? What is the break even size? What can you expect for a parallel CPU version? (Your conclusions here may vary between the labs.)
+
+    The CPU executes faster on small array sizes because of the overhead that is required to copy memory to the GPU and to launch the threads. The break even size is somewhere in between 4096 and 8192.
+    ![Graph_2](Graph2.png)
 
 * (non-mandatory) How can you use local memory to optimize? Did your multiple block solution change?
 

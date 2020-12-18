@@ -11,7 +11,6 @@ __kernel void find_max(__global unsigned int *data, const unsigned int length)
       if(lid < i) {
           data[gid] = max(data[gid + i], data[gid]);
       }
-      barrier(CLK_LOCAL_MEM_FENCE);
   }
 
   if(lid == 0) {
