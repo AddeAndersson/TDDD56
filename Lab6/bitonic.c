@@ -75,7 +75,7 @@ void runKernel(cl_kernel kernel, int threads, cl_mem data, unsigned int length)
 	cl_event event;
 
   int j,k;
-  for (k=2;k<=length;k=2*k)
+  for (k=2;k<=length;k=k<<1)
   {
     for (j=k>>1;j>0;j=j>>1)
     {

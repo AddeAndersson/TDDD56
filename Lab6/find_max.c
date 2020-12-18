@@ -26,7 +26,7 @@
 #include "milli.h"
 
 // Size of data!
-#define kDataLength 1024*2048
+#define kDataLength 1024*512
 #define MAXPRINTSIZE 16
 
 unsigned int *generateRandomData(unsigned int length)
@@ -74,10 +74,15 @@ void runKernel(cl_kernel kernel, int threads, cl_mem data, unsigned int length)
 	
 	// Run kernel
 	cl_event event;
-  ciErrNum = clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
 
-  for(int i = 0; i < globalWorkSize/localWorkSize; i++){
-    globalWorkSize /= 2;
+  int remain = threads;
+  int counter = 0;
+  while(remain > localWorkSize){
+    remain /= localWorkSize;
+    counter++;  
+  }
+
+  for(int i = 0; i < counter + 1; i++){
 	  ciErrNum |= clEnqueueNDRangeKernel(commandQueue, kernel, 1, NULL, &globalWorkSize, &localWorkSize, 0, NULL, &event);
   }
 
